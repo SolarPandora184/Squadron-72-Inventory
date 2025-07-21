@@ -562,6 +562,49 @@
         </div>
     </div>
 
+    <!-- Request Item Modal -->
+    <div class="modal fade" id="requestItemModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-hand-paper me-2"></i>Request Item
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6 class="text-primary">Item Information</h6>
+                        <div id="requestItemInfo" class="p-3 bg-light rounded">
+                            <!-- Item details will be populated here -->
+                        </div>
+                    </div>
+                    <form id="requestItemForm">
+                        <input type="hidden" id="requestItemId">
+                        <div class="mb-3">
+                            <label for="cadetName" class="form-label">Cadet Name *</label>
+                            <input type="text" class="form-control" id="cadetName" required placeholder="Enter your full name">
+                        </div>
+                        <div class="mb-3">
+                            <label for="cadetId" class="form-label">CAP ID *</label>
+                            <input type="text" class="form-control" id="cadetId" required placeholder="Enter your CAP ID number">
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Note:</strong> Once submitted, this item will be assigned to you and removed from the available inventory.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="submitItemRequest()">
+                        <i class="fas fa-check me-2"></i>Submit Request
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Confirm Delete Modal -->
     <div class="modal fade" id="confirmDeleteModal" tabindex="-1">
         <div class="modal-dialog">
@@ -983,14 +1026,79 @@
             modal.show();
         }
 
-        // Request item (placeholder functionality)
+        // Request item - show the request form modal
         function requestItem() {
-            if (!currentItemForDetails) return;
+            if (!currentItemForDetails || currentItemForDetails.status !== 'In Inventory') return;
 
-            showAlert(`Request submitted for "${currentItemForDetails.name}". An administrator will review your request.`, 'info');
+            // Populate the item information in the request modal
+            const itemInfo = `
+                <strong>Item:</strong> ${escapeHtml(currentItemForDetails.name)}<br>
+                <strong>Type:</strong> <span class="badge bg-info">${escapeHtml(currentItemForDetails.type)}</span><br>
+                <strong>Serial/ID:</strong> <code>${escapeHtml(currentItemForDetails.serialNumber)}</code>
+                ${currentItemForDetails.description ? `<br><strong>Description:</strong> ${escapeHtml(currentItemForDetails.description)}` : ''}
+            `;
             
-            const modal = bootstrap.Modal.getInstance(document.getElementById('itemDetailsModal'));
+            document.getElementById('requestItemInfo').innerHTML = itemInfo;
+            document.getElementById('requestItemId').value = currentItemForDetails.id;
+            
+            // Clear the form
+            document.getElementById('cadetName').value = '';
+            document.getElementById('cadetId').value = '';
+            
+            // Hide the item details modal
+            const itemDetailsModal = bootstrap.Modal.getInstance(document.getElementById('itemDetailsModal'));
+            itemDetailsModal.hide();
+            
+            // Show the request modal
+            const requestModal = new bootstrap.Modal(document.getElementById('requestItemModal'));
+            requestModal.show();
+        }
+
+        // Submit the item request
+        function submitItemRequest() {
+            const itemId = document.getElementById('requestItemId').value;
+            const cadetName = document.getElementById('cadetName').value.trim();
+            const cadetId = document.getElementById('cadetId').value.trim();
+            
+            // Validation
+            if (!cadetName || !cadetId) {
+                showAlert('Please fill in both your name and CAP ID.', 'danger');
+                return;
+            }
+            
+            // Find the item
+            const itemIndex = inventory.findIndex(item => item.id === itemId);
+            if (itemIndex === -1) {
+                showAlert('Item not found.', 'danger');
+                return;
+            }
+            
+            const item = inventory[itemIndex];
+            
+            // Check if item is still available
+            if (item.status !== 'In Inventory') {
+                showAlert('This item is no longer available for request.', 'warning');
+                return;
+            }
+            
+            // Update the item status
+            inventory[itemIndex].status = 'Assigned';
+            inventory[itemIndex].assignedTo = `${cadetName} (${cadetId})`;
+            inventory[itemIndex].dateAssigned = new Date().toISOString();
+            
+            // Save to localStorage
+            saveInventory();
+            
+            // Update all displays
+            updateInventoryDisplay();
+            updateCadetDisplay();
+            
+            // Hide the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('requestItemModal'));
             modal.hide();
+            
+            // Show success message
+            showAlert(`Request submitted successfully! "${item.name}" has been assigned to ${cadetName}.`, 'success');
         }
 
         // Clear filters
