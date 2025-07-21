@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CAP Squadron Inventory System</title>
+    <title>Squadron 72 Inventory System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
@@ -196,7 +196,7 @@
         <div class="container">
             <span class="navbar-brand mb-0 h1">
                 <i class="fas fa-plane-departure me-2"></i>
-                <span id="navTitle">Civil Air Patrol - Squadron Inventory</span>
+                <span id="navTitle">Squadron 72 Inventory System</span>
             </span>
             <div>
                 <button class="btn btn-outline-light me-2" onclick="showHome()" id="homeBtn" style="display: none;">
@@ -221,8 +221,8 @@
             <div class="row justify-content-center">
                 <div class="col-md-8">
                     <div class="text-center mb-5">
-                        <h1 class="display-4 mb-4">Inventory Management System</h1>
-                        <p class="lead">Welcome to the Civil Air Patrol Squadron Inventory System</p>
+                        <h1 class="display-4 mb-4">Squadron 72 Inventory System</h1>
+                        <p class="lead">Manage and track squadron equipment, uniforms, and resources</p>
                     </div>
 
                     <div class="row g-4">
@@ -259,23 +259,7 @@
                         </div>
                     </div>
 
-                    <div class="row mt-5">
-                        <div class="col-12">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h5 class="card-title">
-                                        <i class="fas fa-info-circle me-2"></i>System Information
-                                    </h5>
-                                    <ul class="list-unstyled mb-0">
-                                        <li><strong>Admin Functions:</strong> Add items, manage inventory, update status</li>
-                                        <li><strong>Cadet Functions:</strong> Search items, submit requests, track availability</li>
-                                        <li><strong>Item Types:</strong> Uniforms, Insignia, Equipment</li>
-                                        <li><strong>Status Tracking:</strong> In Inventory, Assigned</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
                 </div>
             </div>
         </div>
@@ -816,7 +800,7 @@
             document.getElementById('adminPage').classList.add('hidden');
             document.getElementById('cadetPage').classList.add('hidden');
             document.getElementById('homeBtn').style.display = 'none';
-            document.getElementById('navTitle').textContent = 'Civil Air Patrol - Squadron Inventory';
+            document.getElementById('navTitle').textContent = 'Squadron 72 Inventory System';
         }
 
         function showAdmin() {
