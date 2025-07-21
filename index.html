@@ -631,32 +631,146 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    <script>
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, get, child, push, update, remove, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDCo2OweTTS-g60MVwL9N-VUCyCyctZavc",
+            authDomain: "squadron-72.firebaseapp.com",
+            databaseURL: "https://squadron-72-default-rtdb.firebaseio.com",
+            projectId: "squadron-72",
+            storageBucket: "squadron-72.firebasestorage.app",
+            messagingSenderId: "572966132981",
+            appId: "1:572966132981:web:44053bbe8c60378647f9bc",
+            measurementId: "G-0D77CRVR83"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        
         // Global variables
         let inventory = [];
         let currentItemToDelete = null;
         let currentItemForDetails = null;
 
+        // Firebase Database Functions
+        window.InventoryDB = {
+            // Add new inventory item
+            async addItem(itemData) {
+                try {
+                    const itemsRef = ref(database, 'inventory');
+                    const newItemRef = push(itemsRef);
+                    const newItem = {
+                        ...itemData,
+                        id: newItemRef.key,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    };
+                    await set(newItemRef, newItem);
+                    return { success: true, id: newItemRef.key, item: newItem };
+                } catch (error) {
+                    console.error('Error adding item:', error);
+                    return { success: false, error: error.message };
+                }
+            },
+
+            // Get all inventory items
+            async getAllItems() {
+                try {
+                    const dbRef = ref(database);
+                    const snapshot = await get(child(dbRef, 'inventory'));
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        return Object.values(data);
+                    } else {
+                        return [];
+                    }
+                } catch (error) {
+                    console.error('Error getting items:', error);
+                    return [];
+                }
+            },
+
+            // Update existing item
+            async updateItem(itemId, updates) {
+                try {
+                    const itemRef = ref(database, `inventory/${itemId}`);
+                    await update(itemRef, {
+                        ...updates,
+                        updatedAt: new Date().toISOString()
+                    });
+                    return { success: true };
+                } catch (error) {
+                    console.error('Error updating item:', error);
+                    return { success: false, error: error.message };
+                }
+            },
+
+            // Delete item
+            async deleteItem(itemId) {
+                try {
+                    const itemRef = ref(database, `inventory/${itemId}`);
+                    await remove(itemRef);
+                    return { success: true };
+                } catch (error) {
+                    console.error('Error deleting item:', error);
+                    return { success: false, error: error.message };
+                }
+            },
+
+            // Listen for real-time updates
+            onInventoryUpdate(callback) {
+                const inventoryRef = ref(database, 'inventory');
+                onValue(inventoryRef, (snapshot) => {
+                    const data = snapshot.val();
+                    const items = data ? Object.values(data) : [];
+                    callback(items);
+                });
+            }
+        };
+
         // Initialize the application
-        document.addEventListener('DOMContentLoaded', function() {
-            loadInventory();
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadInventory();
             setupEventListeners();
             updateInventoryDisplay();
             updateCadetDisplay();
+            
+            // Set up real-time updates
+            InventoryDB.onInventoryUpdate((items) => {
+                inventory = items;
+                updateInventoryDisplay();
+                updateCadetDisplay();
+            });
         });
 
-        // Load inventory from localStorage
-        function loadInventory() {
-            const savedInventory = localStorage.getItem('capInventory');
-            if (savedInventory) {
-                inventory = JSON.parse(savedInventory);
+        // Load inventory from Firebase
+        async function loadInventory() {
+            try {
+                showAlert('Loading inventory...', 'info');
+                inventory = await InventoryDB.getAllItems();
+                console.log('Loaded inventory:', inventory);
+            } catch (error) {
+                console.error('Error loading inventory:', error);
+                showAlert('Error loading inventory. Please refresh the page.', 'danger');
             }
         }
 
-        // Save inventory to localStorage
-        function saveInventory() {
-            localStorage.setItem('capInventory', JSON.stringify(inventory));
-        }
+        // Make functions available globally
+        window.loadInventory = loadInventory;
+        window.inventory = inventory;
+    </script>
+    
+    <script>
+        // These functions are now handled by Firebase module above
+        // Keeping some global variables for backward compatibility
+        let currentItemToDelete = null;
+        let currentItemForDetails = null;
 
         // Setup event listeners
         function setupEventListeners() {
@@ -724,7 +838,7 @@
         }
 
         // Add new item
-        function addItem(event) {
+        async function addItem(event) {
             event.preventDefault();
             
             const itemName = document.getElementById('itemName').value.trim();
@@ -752,9 +866,14 @@
                 return;
             }
 
-            // Create new item
-            const newItem = {
-                id: Date.now().toString(),
+            // Show loading state
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Adding...';
+            submitBtn.disabled = true;
+
+            // Create new item data
+            const newItemData = {
                 name: itemName,
                 type: itemType,
                 serialNumber: serialNumber,
@@ -764,15 +883,21 @@
                 dateAdded: new Date().toISOString()
             };
 
-            inventory.push(newItem);
-            saveInventory();
-            updateInventoryDisplay();
-            
-            // Reset form
-            document.getElementById('addItemForm').reset();
-            document.getElementById('assignedTo').disabled = true;
-            
-            showAlert('Item added successfully!', 'success');
+            // Add to Firebase
+            const result = await InventoryDB.addItem(newItemData);
+
+            if (result.success) {
+                // Reset form
+                document.getElementById('addItemForm').reset();
+                document.getElementById('assignedTo').disabled = true;
+                showAlert('Item added successfully!', 'success');
+            } else {
+                showAlert(`Error adding item: ${result.error}`, 'danger');
+            }
+
+            // Restore button state
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
         }
 
         // Update inventory display
@@ -906,7 +1031,7 @@
         }
 
         // Save edited item
-        function saveEditItem() {
+        async function saveEditItem() {
             const itemId = document.getElementById('editItemId').value;
             const itemName = document.getElementById('editItemName').value.trim();
             const itemType = document.getElementById('editItemType').value;
@@ -933,28 +1058,35 @@
                 return;
             }
 
-            // Update item
-            const itemIndex = inventory.findIndex(i => i.id === itemId);
-            if (itemIndex !== -1) {
-                inventory[itemIndex] = {
-                    ...inventory[itemIndex],
-                    name: itemName,
-                    type: itemType,
-                    serialNumber: serialNumber,
-                    status: itemStatus,
-                    assignedTo: itemStatus === 'Assigned' ? assignedTo : '',
-                    description: itemDescription
-                };
+            // Show loading state
+            const saveBtn = document.querySelector('#editItemModal .btn-primary');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+            saveBtn.disabled = true;
 
-                saveInventory();
-                updateInventoryDisplay();
-                updateCadetDisplay();
+            // Update item data
+            const updates = {
+                name: itemName,
+                type: itemType,
+                serialNumber: serialNumber,
+                status: itemStatus,
+                assignedTo: itemStatus === 'Assigned' ? assignedTo : '',
+                description: itemDescription
+            };
 
+            const result = await InventoryDB.updateItem(itemId, updates);
+
+            if (result.success) {
                 const modal = bootstrap.Modal.getInstance(document.getElementById('editItemModal'));
                 modal.hide();
-
                 showAlert('Item updated successfully!', 'success');
+            } else {
+                showAlert(`Error updating item: ${result.error}`, 'danger');
             }
+
+            // Restore button state
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
         }
 
         // Delete item
@@ -963,19 +1095,24 @@
             const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
             modal.show();
 
-            document.getElementById('confirmDeleteBtn').onclick = function() {
-                const itemIndex = inventory.findIndex(i => i.id === currentItemToDelete);
-                if (itemIndex !== -1) {
-                    inventory.splice(itemIndex, 1);
-                    saveInventory();
-                    updateInventoryDisplay();
-                    updateCadetDisplay();
-                    
+            document.getElementById('confirmDeleteBtn').onclick = async function() {
+                const deleteBtn = this;
+                const originalText = deleteBtn.innerHTML;
+                deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
+                deleteBtn.disabled = true;
+
+                const result = await InventoryDB.deleteItem(currentItemToDelete);
+                
+                if (result.success) {
                     const modal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
                     modal.hide();
-                    
                     showAlert('Item deleted successfully!', 'success');
+                } else {
+                    showAlert(`Error deleting item: ${result.error}`, 'danger');
                 }
+
+                deleteBtn.innerHTML = originalText;
+                deleteBtn.disabled = false;
                 currentItemToDelete = null;
             };
         }
@@ -1055,7 +1192,7 @@
         }
 
         // Submit the item request
-        function submitItemRequest() {
+        async function submitItemRequest() {
             const itemId = document.getElementById('requestItemId').value;
             const cadetName = document.getElementById('cadetName').value.trim();
             const cadetId = document.getElementById('cadetId').value.trim();
@@ -1067,38 +1204,47 @@
             }
             
             // Find the item
-            const itemIndex = inventory.findIndex(item => item.id === itemId);
-            if (itemIndex === -1) {
+            const item = inventory.find(item => item.id === itemId);
+            if (!item) {
                 showAlert('Item not found.', 'danger');
                 return;
             }
-            
-            const item = inventory[itemIndex];
             
             // Check if item is still available
             if (item.status !== 'In Inventory') {
                 showAlert('This item is no longer available for request.', 'warning');
                 return;
             }
+
+            // Show loading state
+            const submitBtn = document.querySelector('#requestItemModal .btn-success');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+            submitBtn.disabled = true;
             
             // Update the item status
-            inventory[itemIndex].status = 'Assigned';
-            inventory[itemIndex].assignedTo = `${cadetName} (${cadetId})`;
-            inventory[itemIndex].dateAssigned = new Date().toISOString();
-            
-            // Save to localStorage
-            saveInventory();
-            
-            // Update all displays
-            updateInventoryDisplay();
-            updateCadetDisplay();
-            
-            // Hide the modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('requestItemModal'));
-            modal.hide();
-            
-            // Show success message
-            showAlert(`Request submitted successfully! "${item.name}" has been assigned to ${cadetName}.`, 'success');
+            const updates = {
+                status: 'Assigned',
+                assignedTo: `${cadetName} (${cadetId})`,
+                dateAssigned: new Date().toISOString()
+            };
+
+            const result = await InventoryDB.updateItem(itemId, updates);
+
+            if (result.success) {
+                // Hide the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('requestItemModal'));
+                modal.hide();
+                
+                // Show success message
+                showAlert(`Request submitted successfully! "${item.name}" has been assigned to ${cadetName}.`, 'success');
+            } else {
+                showAlert(`Error submitting request: ${result.error}`, 'danger');
+            }
+
+            // Restore button state
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
         }
 
         // Clear filters
