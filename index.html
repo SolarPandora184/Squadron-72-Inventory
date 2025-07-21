@@ -1,280 +1,1152 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CAP Squadron Inventory System</title>
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  />
-  <link
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-    rel="stylesheet"
-  />
-  <style>
-    body {
-      background-color: #f8f9fa;
-      padding: 20px;
-    }
-    .inventory-table th,
-    .inventory-table td {
-      vertical-align: middle;
-    }
-    .admin-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .section-divider {
-      border-top: 2px solid #dee2e6;
-      margin: 40px 0 20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAP Squadron Inventory System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --cap-blue: #003366;
+            --cap-gold: #FFD700;
+            --cap-light-blue: #4A90E2;
+            --cap-gray: #6C757D;
+            --success-green: #198754;
+            --warning-orange: #fd7e14;
+            --danger-red: #dc3545;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            line-height: 1.6;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+
+        .navbar-dark .navbar-brand:hover {
+            color: var(--cap-gold) !important;
+        }
+
+        .card {
+            border: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .card-header {
+            border-radius: 10px 10px 0 0 !important;
+            font-weight: 600;
+        }
+
+        .item-card {
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+
+        .item-card:hover {
+            border-color: var(--cap-light-blue);
+            box-shadow: 0 4px 20px rgba(74, 144, 226, 0.15);
+        }
+
+        .btn {
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background-color: var(--cap-blue);
+            border-color: var(--cap-blue);
+        }
+
+        .btn-primary:hover {
+            background-color: #002244;
+            border-color: #002244;
+        }
+
+        .btn-success {
+            background-color: var(--success-green);
+            border-color: var(--success-green);
+        }
+
+        .table {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table-striped > tbody > tr:nth-of-type(odd) > td {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(74, 144, 226, 0.1);
+        }
+
+        .badge {
+            font-size: 0.75em;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .form-control, .form-select {
+            border-radius: 6px;
+            border: 1px solid #ced4da;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--cap-light-blue);
+            box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25);
+        }
+
+        .alert {
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+        }
+
+        .modal-content {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            background-color: #f8f9fa;
+            border-radius: 10px 10px 0 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .modal-title {
+            font-weight: 600;
+            color: var(--cap-blue);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .container {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .search-filters {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .cadet-item-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .cadet-item-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--cap-gray);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="admin-header">
-      <h1>CAP Squadron 72 Inventory</h1>
-      <button id="adminButton" class="btn btn-secondary">Admin</button>
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-plane-departure me-2"></i>
+                <span id="navTitle">Civil Air Patrol - Squadron Inventory</span>
+            </span>
+            <div>
+                <button class="btn btn-outline-light me-2" onclick="showHome()" id="homeBtn" style="display: none;">
+                    <i class="fas fa-home me-2"></i>Home
+                </button>
+                <button class="btn btn-outline-light me-2" onclick="showAdmin()" id="adminBtn">
+                    <i class="fas fa-user-shield me-2"></i>Admin
+                </button>
+                <button class="btn btn-outline-light" onclick="showCadet()" id="cadetBtn">
+                    <i class="fas fa-clipboard-list me-2"></i>Cadet
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Alert for messages -->
+        <div id="alertContainer"></div>
+
+        <!-- Home Page -->
+        <div id="homePage">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="text-center mb-5">
+                        <h1 class="display-4 mb-4">Inventory Management System</h1>
+                        <p class="lead">Welcome to the Civil Air Patrol Squadron Inventory System</p>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card h-100 shadow">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-user-shield fa-3x text-primary mb-3"></i>
+                                    <h4 class="card-title">Admin Portal</h4>
+                                    <p class="card-text">
+                                        Manage inventory items, add new equipment, and track assignments.
+                                        Administrative access required.
+                                    </p>
+                                    <button class="btn btn-primary btn-lg" onclick="showAdmin()">
+                                        <i class="fas fa-cog me-2"></i>Admin Access
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card h-100 shadow">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-clipboard-list fa-3x text-success mb-3"></i>
+                                    <h4 class="card-title">Cadet Portal</h4>
+                                    <p class="card-text">
+                                        Browse available inventory items and submit requests for equipment,
+                                        uniforms, and insignia.
+                                    </p>
+                                    <button class="btn btn-success btn-lg" onclick="showCadet()">
+                                        <i class="fas fa-search me-2"></i>Browse Items
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-5">
+                        <div class="col-12">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-info-circle me-2"></i>System Information
+                                    </h5>
+                                    <ul class="list-unstyled mb-0">
+                                        <li><strong>Admin Functions:</strong> Add items, manage inventory, update status</li>
+                                        <li><strong>Cadet Functions:</strong> Search items, submit requests, track availability</li>
+                                        <li><strong>Item Types:</strong> Uniforms, Insignia, Equipment</li>
+                                        <li><strong>Status Tracking:</strong> In Inventory, Assigned</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Page -->
+        <div id="adminPage" class="hidden">
+            <!-- Add Item Form -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-plus-circle me-2"></i>Add New Item
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="addItemForm">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="itemName" class="form-label">Item Name *</label>
+                                            <input type="text" class="form-control" id="itemName" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="itemType" class="form-label">Item Type *</label>
+                                            <select class="form-select" id="itemType" required>
+                                                <option value="">Select Type</option>
+                                                <option value="Uniform">Uniform</option>
+                                                <option value="Insignia">Insignia</option>
+                                                <option value="Equipment">Equipment</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="serialNumber" class="form-label">Serial Number/ID *</label>
+                                            <input type="text" class="form-control" id="serialNumber" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="itemStatus" class="form-label">Status *</label>
+                                            <select class="form-select" id="itemStatus" required>
+                                                <option value="">Select Status</option>
+                                                <option value="In Inventory">In Inventory</option>
+                                                <option value="Assigned">Assigned</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="assignedTo" class="form-label">Assigned To</label>
+                                            <input type="text" class="form-control" id="assignedTo" placeholder="Leave blank if in inventory">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="itemDescription" class="form-label">Description</label>
+                                            <textarea class="form-control" id="itemDescription" rows="1" placeholder="Optional description"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Add Item
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="search-filters">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label for="searchInput" class="form-label">Search Items</label>
+                                <input type="text" class="form-control" id="searchInput" placeholder="Search by name, serial, or assigned to...">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="filterType" class="form-label">Filter by Type</label>
+                                <select class="form-select" id="filterType">
+                                    <option value="">All Types</option>
+                                    <option value="Uniform">Uniform</option>
+                                    <option value="Insignia">Insignia</option>
+                                    <option value="Equipment">Equipment</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="filterStatus" class="form-label">Filter by Status</label>
+                                <select class="form-select" id="filterStatus">
+                                    <option value="">All Status</option>
+                                    <option value="In Inventory">In Inventory</option>
+                                    <option value="Assigned">Assigned</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                                    <i class="fas fa-times me-2"></i>Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Table -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-boxes me-2"></i>Current Inventory
+                            </h5>
+                            <span id="itemCount" class="badge bg-light text-dark">0 items</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Item Name</th>
+                                            <th>Type</th>
+                                            <th>Serial/ID</th>
+                                            <th>Status</th>
+                                            <th>Assigned To</th>
+                                            <th>Description</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="inventoryTableBody">
+                                        <!-- Items will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="emptyInventory" class="empty-state hidden">
+                                <i class="fas fa-box-open"></i>
+                                <h4>No items in inventory</h4>
+                                <p>Start by adding your first inventory item above.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cadet Page -->
+        <div id="cadetPage" class="hidden">
+            <!-- Search and Browse Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-search me-2"></i>Browse Available Items
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="cadetSearchInput" class="form-label">Search Items</label>
+                                    <input type="text" class="form-control" id="cadetSearchInput" placeholder="Search for uniforms, insignia, equipment...">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="cadetFilterType" class="form-label">Filter by Type</label>
+                                    <select class="form-select" id="cadetFilterType">
+                                        <option value="">All Types</option>
+                                        <option value="Uniform">Uniform</option>
+                                        <option value="Insignia">Insignia</option>
+                                        <option value="Equipment">Equipment</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="cadetFilterAvailability" class="form-label">Availability</label>
+                                    <select class="form-select" id="cadetFilterAvailability">
+                                        <option value="">All Items</option>
+                                        <option value="available">Available Only</option>
+                                        <option value="assigned">Currently Assigned</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items Grid -->
+            <div class="row" id="cadetItemsGrid">
+                <!-- Items will be populated here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyCadetItems" class="empty-state hidden">
+                <i class="fas fa-search"></i>
+                <h4>No items found</h4>
+                <p>Try adjusting your search criteria or check back later for new inventory.</p>
+            </div>
+        </div>
     </div>
 
-    <div id="adminSection" style="display: none;">
-      <h2 class="mt-4">Manage Inventory</h2>
-      <table
-        class="table table-bordered table-striped inventory-table"
-      >
-        <thead class="table-dark">
-          <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Status</th>
-            <th>Assigned To</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="inventoryTableBody"></tbody>
-      </table>
-
-      <h3>Add Item</h3>
-      <form id="addItemForm">
-        <div class="row g-3">
-          <div class="col-md-4">
-            <input
-              type="text"
-              id="itemName"
-              class="form-control"
-              placeholder="Item Name"
-              required
-            />
-          </div>
-          <div class="col-md-3">
-            <select id="itemType" class="form-select" required>
-              <option value="">Select Type</option>
-              <option value="Uniform">Uniform</option>
-              <option value="Insignia">Insignia</option>
-              <option value="Equipment">Equipment</option>
-            </select>
-          </div>
-          <div class="col-md-3">
-            <select id="itemStatus" class="form-select" required>
-              <option value="In Inventory">In Inventory</option>
-              <option value="Assigned">Assigned</option>
-            </select>
-          </div>
-          <div class="col-md-2">
-            <input
-              type="text"
-              id="itemAssignedTo"
-              class="form-control"
-              placeholder="Assigned To"
-            />
-          </div>
-          <div class="col-12">
-            <button type="submit" class="btn btn-primary">Add Item</button>
-          </div>
+    <!-- Edit Item Modal -->
+    <div class="modal fade" id="editItemModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>Edit Item
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editItemForm">
+                        <input type="hidden" id="editItemId">
+                        <div class="mb-3">
+                            <label for="editItemName" class="form-label">Item Name *</label>
+                            <input type="text" class="form-control" id="editItemName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editItemType" class="form-label">Item Type *</label>
+                            <select class="form-select" id="editItemType" required>
+                                <option value="Uniform">Uniform</option>
+                                <option value="Insignia">Insignia</option>
+                                <option value="Equipment">Equipment</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editSerialNumber" class="form-label">Serial Number/ID *</label>
+                            <input type="text" class="form-control" id="editSerialNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editItemStatus" class="form-label">Status *</label>
+                            <select class="form-select" id="editItemStatus" required>
+                                <option value="In Inventory">In Inventory</option>
+                                <option value="Assigned">Assigned</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editAssignedTo" class="form-label">Assigned To</label>
+                            <input type="text" class="form-control" id="editAssignedTo" placeholder="Leave blank if in inventory">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editItemDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="editItemDescription" rows="2"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEditItem()">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </div>
         </div>
-      </form>
     </div>
 
-    <div class="section-divider"></div>
-
-    <h2>Cadet View</h2>
-    <table class="table table-bordered table-hover">
-      <thead class="table-light">
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th>Assigned To</th>
-        </tr>
-      </thead>
-      <tbody id="cadetTableBody"></tbody>
-    </table>
-  </div>
-
-  <!-- Delete Modal -->
-  <div
-    class="modal fade"
-    id="deleteModal"
-    tabindex="-1"
-    aria-hidden="true"
-  >
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header bg-danger text-white">
-          <h5 class="modal-title">Confirm Deletion</h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
+    <!-- Item Details Modal for Cadet View -->
+    <div class="modal fade" id="itemDetailsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-info-circle me-2"></i>Item Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="itemDetailsContent">
+                    <!-- Content will be populated dynamically -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" id="requestItemBtn" onclick="requestItem()">
+                        <i class="fas fa-hand-paper me-2"></i>Request Item
+                    </button>
+                </div>
+            </div>
         </div>
-        <div class="modal-body">Are you sure you want to delete this item?</div>
-        <div class="modal-footer">
-          <button
-            id="confirmDeleteBtn"
-            type="button"
-            class="btn btn-danger"
-          >
-            Delete
-          </button>
-          <button
-            type="button"
-            class="btn btn-secondary"
-            data-bs-dismiss="modal"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
     </div>
-  </div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics-compat.js"></script>
+    <!-- Request Item Modal -->
+    <div class="modal fade" id="requestItemModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-hand-paper me-2"></i>Request Item
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6 class="text-primary">Item Information</h6>
+                        <div id="requestItemInfo" class="p-3 bg-light rounded">
+                            <!-- Item details will be populated here -->
+                        </div>
+                    </div>
+                    <form id="requestItemForm">
+                        <input type="hidden" id="requestItemId">
+                        <div class="mb-3">
+                            <label for="cadetName" class="form-label">Cadet Name *</label>
+                            <input type="text" class="form-control" id="cadetName" required placeholder="Enter your full name">
+                        </div>
+                        <div class="mb-3">
+                            <label for="cadetId" class="form-label">CAP ID *</label>
+                            <input type="text" class="form-control" id="cadetId" required placeholder="Enter your CAP ID number">
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Note:</strong> Once submitted, this item will be assigned to you and removed from the available inventory.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="submitItemRequest()">
+                        <i class="fas fa-check me-2"></i>Submit Request
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-  <script>
-    // Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyDCo2OweTTS-g60MVwL9N-VUCyCyctZavc",
-      authDomain: "squadron-72.firebaseapp.com",
-      databaseURL: "https://squadron-72-default-rtdb.firebaseio.com",
-      projectId: "squadron-72",
-      storageBucket: "squadron-72.firebasestorage.app",
-      messagingSenderId: "572966132981",
-      appId: "1:572966132981:web:44053bbe8c60378647f9bc",
-      measurementId: "G-0D77CRVR83"
-    };
+    <!-- Confirm Delete Modal -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this item from the inventory?</p>
+                    <p class="text-muted">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="fas fa-trash me-2"></i>Delete Item
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    firebase.analytics();
-    const db = firebase.database();
-  </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Global variables
+        let inventory = [];
+        let currentItemToDelete = null;
+        let currentItemForDetails = null;
 
-  <script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-  ></script>
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadInventory();
+            setupEventListeners();
+            updateInventoryDisplay();
+            updateCadetDisplay();
+        });
 
-  <script>
-    let inventory = [];
-    let currentItemToDelete = null;
+        // Load inventory from localStorage
+        function loadInventory() {
+            const savedInventory = localStorage.getItem('capInventory');
+            if (savedInventory) {
+                inventory = JSON.parse(savedInventory);
+            }
+        }
 
-    function saveInventory() {
-      db.ref("inventory").set(inventory);
-    }
+        // Save inventory to localStorage
+        function saveInventory() {
+            localStorage.setItem('capInventory', JSON.stringify(inventory));
+        }
 
-    function loadInventory() {
-      db.ref("inventory").on("value", (snapshot) => {
-        const data = snapshot.val();
-        inventory = Array.isArray(data) ? data : [];
-        updateInventoryDisplay();
-        updateCadetDisplay();
-      });
-    }
+        // Setup event listeners
+        function setupEventListeners() {
+            // Add item form
+            document.getElementById('addItemForm').addEventListener('submit', addItem);
+            
+            // Search and filter inputs
+            document.getElementById('searchInput').addEventListener('input', updateInventoryDisplay);
+            document.getElementById('filterType').addEventListener('change', updateInventoryDisplay);
+            document.getElementById('filterStatus').addEventListener('change', updateInventoryDisplay);
+            
+            // Cadet search and filter
+            document.getElementById('cadetSearchInput').addEventListener('input', updateCadetDisplay);
+            document.getElementById('cadetFilterType').addEventListener('change', updateCadetDisplay);
+            document.getElementById('cadetFilterAvailability').addEventListener('change', updateCadetDisplay);
+            
+            // Status change in edit form
+            document.getElementById('editItemStatus').addEventListener('change', function() {
+                const assignedToField = document.getElementById('editAssignedTo');
+                if (this.value === 'In Inventory') {
+                    assignedToField.value = '';
+                    assignedToField.disabled = true;
+                } else {
+                    assignedToField.disabled = false;
+                }
+            });
+            
+            // Status change in add form
+            document.getElementById('itemStatus').addEventListener('change', function() {
+                const assignedToField = document.getElementById('assignedTo');
+                if (this.value === 'In Inventory') {
+                    assignedToField.value = '';
+                    assignedToField.disabled = true;
+                } else {
+                    assignedToField.disabled = false;
+                }
+            });
+        }
 
-    function updateInventoryDisplay() {
-      const tbody = document.getElementById("inventoryTableBody");
-      tbody.innerHTML = "";
-      inventory.forEach((item, index) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${item.name}</td>
-          <td>${item.type}</td>
-          <td>${item.status}</td>
-          <td>${item.assignedTo || ""}</td>
-          <td>
-            <button class="btn btn-sm btn-danger" onclick="confirmDelete(${index})">
-              <i class="fas fa-trash"></i>
-            </button>
-          </td>
-        `;
-        tbody.appendChild(row);
-      });
-    }
+        // Page navigation functions
+        function showHome() {
+            document.getElementById('homePage').classList.remove('hidden');
+            document.getElementById('adminPage').classList.add('hidden');
+            document.getElementById('cadetPage').classList.add('hidden');
+            document.getElementById('homeBtn').style.display = 'none';
+            document.getElementById('navTitle').textContent = 'Civil Air Patrol - Squadron Inventory';
+        }
 
-    function updateCadetDisplay() {
-      const tbody = document.getElementById("cadetTableBody");
-      tbody.innerHTML = "";
-      inventory.forEach((item) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${item.name}</td>
-          <td>${item.type}</td>
-          <td>${item.status}</td>
-          <td>${item.assignedTo || ""}</td>
-        `;
-        tbody.appendChild(row);
-      });
-    }
+        function showAdmin() {
+            document.getElementById('homePage').classList.add('hidden');
+            document.getElementById('adminPage').classList.remove('hidden');
+            document.getElementById('cadetPage').classList.add('hidden');
+            document.getElementById('homeBtn').style.display = 'inline-block';
+            document.getElementById('navTitle').textContent = 'Admin Portal';
+            updateInventoryDisplay();
+        }
 
-    function confirmDelete(index) {
-      currentItemToDelete = index;
-      new bootstrap.Modal(document.getElementById("deleteModal")).show();
-    }
+        function showCadet() {
+            document.getElementById('homePage').classList.add('hidden');
+            document.getElementById('adminPage').classList.add('hidden');
+            document.getElementById('cadetPage').classList.remove('hidden');
+            document.getElementById('homeBtn').style.display = 'inline-block';
+            document.getElementById('navTitle').textContent = 'Cadet Portal';
+            updateCadetDisplay();
+        }
 
-    document.getElementById("confirmDeleteBtn").addEventListener("click", () => {
-      if (currentItemToDelete !== null) {
-        inventory.splice(currentItemToDelete, 1);
-        saveInventory();
-        updateInventoryDisplay();
-        updateCadetDisplay();
-        currentItemToDelete = null;
-        bootstrap.Modal.getInstance(
-          document.getElementById("deleteModal")
-        ).hide();
-      }
-    });
+        // Add new item
+        function addItem(event) {
+            event.preventDefault();
+            
+            const itemName = document.getElementById('itemName').value.trim();
+            const itemType = document.getElementById('itemType').value;
+            const serialNumber = document.getElementById('serialNumber').value.trim();
+            const itemStatus = document.getElementById('itemStatus').value;
+            const assignedTo = document.getElementById('assignedTo').value.trim();
+            const itemDescription = document.getElementById('itemDescription').value.trim();
 
-    document.getElementById("addItemForm").addEventListener("submit", (e) => {
-      e.preventDefault();
-      const name = document.getElementById("itemName").value.trim();
-      const type = document.getElementById("itemType").value;
-      const status = document.getElementById("itemStatus").value;
-      const assignedTo = document.getElementById("itemAssignedTo").value.trim();
+            // Validation
+            if (!itemName || !itemType || !serialNumber || !itemStatus) {
+                showAlert('Please fill in all required fields.', 'danger');
+                return;
+            }
 
-      if (!name || !type || !status) return;
+            // Check for duplicate serial number
+            if (inventory.some(item => item.serialNumber === serialNumber)) {
+                showAlert('An item with this serial number already exists.', 'danger');
+                return;
+            }
 
-      inventory.push({ name, type, status, assignedTo });
-      saveInventory();
-      updateInventoryDisplay();
-      updateCadetDisplay();
-      e.target.reset();
-    });
+            // Validate assignment
+            if (itemStatus === 'Assigned' && !assignedTo) {
+                showAlert('Please specify who the item is assigned to.', 'danger');
+                return;
+            }
 
-    document.getElementById("adminButton").addEventListener("click", () => {
-      const section = document.getElementById("adminSection");
-      section.style.display =
-        section.style.display === "none" ? "block" : "none";
-    });
+            // Create new item
+            const newItem = {
+                id: Date.now().toString(),
+                name: itemName,
+                type: itemType,
+                serialNumber: serialNumber,
+                status: itemStatus,
+                assignedTo: itemStatus === 'Assigned' ? assignedTo : '',
+                description: itemDescription,
+                dateAdded: new Date().toISOString()
+            };
 
-    document.addEventListener("DOMContentLoaded", () => {
-      loadInventory();
-    });
-  </script>
+            inventory.push(newItem);
+            saveInventory();
+            updateInventoryDisplay();
+            
+            // Reset form
+            document.getElementById('addItemForm').reset();
+            document.getElementById('assignedTo').disabled = true;
+            
+            showAlert('Item added successfully!', 'success');
+        }
+
+        // Update inventory display
+        function updateInventoryDisplay() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const typeFilter = document.getElementById('filterType').value;
+            const statusFilter = document.getElementById('filterStatus').value;
+
+            let filteredInventory = inventory.filter(item => {
+                const matchesSearch = item.name.toLowerCase().includes(searchTerm) ||
+                                    item.serialNumber.toLowerCase().includes(searchTerm) ||
+                                    item.assignedTo.toLowerCase().includes(searchTerm);
+                const matchesType = !typeFilter || item.type === typeFilter;
+                const matchesStatus = !statusFilter || item.status === statusFilter;
+                
+                return matchesSearch && matchesType && matchesStatus;
+            });
+
+            const tableBody = document.getElementById('inventoryTableBody');
+            const emptyState = document.getElementById('emptyInventory');
+            const itemCount = document.getElementById('itemCount');
+
+            if (filteredInventory.length === 0) {
+                tableBody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                itemCount.textContent = '0 items';
+            } else {
+                emptyState.classList.add('hidden');
+                itemCount.textContent = `${filteredInventory.length} item${filteredInventory.length !== 1 ? 's' : ''}`;
+                
+                tableBody.innerHTML = filteredInventory.map(item => `
+                    <tr>
+                        <td>${escapeHtml(item.name)}</td>
+                        <td><span class="badge bg-info">${escapeHtml(item.type)}</span></td>
+                        <td><code>${escapeHtml(item.serialNumber)}</code></td>
+                        <td>
+                            <span class="badge status-badge ${item.status === 'In Inventory' ? 'bg-success' : 'bg-warning text-dark'}">
+                                ${escapeHtml(item.status)}
+                            </span>
+                        </td>
+                        <td>${item.assignedTo ? escapeHtml(item.assignedTo) : '<span class="text-muted">-</span>'}</td>
+                        <td>${item.description ? escapeHtml(item.description) : '<span class="text-muted">-</span>'}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="editItem('${item.id}')" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteItem('${item.id}')" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // Update cadet display
+        function updateCadetDisplay() {
+            const searchTerm = document.getElementById('cadetSearchInput').value.toLowerCase();
+            const typeFilter = document.getElementById('cadetFilterType').value;
+            const availabilityFilter = document.getElementById('cadetFilterAvailability').value;
+
+            let filteredInventory = inventory.filter(item => {
+                const matchesSearch = item.name.toLowerCase().includes(searchTerm) ||
+                                    item.type.toLowerCase().includes(searchTerm) ||
+                                    item.description.toLowerCase().includes(searchTerm);
+                const matchesType = !typeFilter || item.type === typeFilter;
+                const matchesAvailability = !availabilityFilter || 
+                                          (availabilityFilter === 'available' && item.status === 'In Inventory') ||
+                                          (availabilityFilter === 'assigned' && item.status === 'Assigned');
+                
+                return matchesSearch && matchesType && matchesAvailability;
+            });
+
+            const itemsGrid = document.getElementById('cadetItemsGrid');
+            const emptyState = document.getElementById('emptyCadetItems');
+
+            if (filteredInventory.length === 0) {
+                itemsGrid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                
+                itemsGrid.innerHTML = filteredInventory.map(item => `
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card cadet-item-card h-100" onclick="showItemDetails('${item.id}')">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5 class="card-title mb-0">${escapeHtml(item.name)}</h5>
+                                    <span class="badge ${item.status === 'In Inventory' ? 'bg-success' : 'bg-warning text-dark'}">
+                                        ${escapeHtml(item.status)}
+                                    </span>
+                                </div>
+                                <div class="mb-2">
+                                    <span class="badge bg-info me-1">${escapeHtml(item.type)}</span>
+                                    <small class="text-muted">ID: ${escapeHtml(item.serialNumber)}</small>
+                                </div>
+                                ${item.description ? `<p class="card-text small text-muted">${escapeHtml(item.description)}</p>` : ''}
+                                ${item.assignedTo ? `<p class="card-text small"><strong>Assigned to:</strong> ${escapeHtml(item.assignedTo)}</p>` : ''}
+                                <div class="text-end">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>Click for details
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Edit item
+        function editItem(itemId) {
+            const item = inventory.find(i => i.id === itemId);
+            if (!item) return;
+
+            document.getElementById('editItemId').value = item.id;
+            document.getElementById('editItemName').value = item.name;
+            document.getElementById('editItemType').value = item.type;
+            document.getElementById('editSerialNumber').value = item.serialNumber;
+            document.getElementById('editItemStatus').value = item.status;
+            document.getElementById('editAssignedTo').value = item.assignedTo;
+            document.getElementById('editItemDescription').value = item.description;
+
+            // Enable/disable assigned to field based on status
+            document.getElementById('editAssignedTo').disabled = item.status === 'In Inventory';
+
+            const modal = new bootstrap.Modal(document.getElementById('editItemModal'));
+            modal.show();
+        }
+
+        // Save edited item
+        function saveEditItem() {
+            const itemId = document.getElementById('editItemId').value;
+            const itemName = document.getElementById('editItemName').value.trim();
+            const itemType = document.getElementById('editItemType').value;
+            const serialNumber = document.getElementById('editSerialNumber').value.trim();
+            const itemStatus = document.getElementById('editItemStatus').value;
+            const assignedTo = document.getElementById('editAssignedTo').value.trim();
+            const itemDescription = document.getElementById('editItemDescription').value.trim();
+
+            // Validation
+            if (!itemName || !itemType || !serialNumber || !itemStatus) {
+                showAlert('Please fill in all required fields.', 'danger');
+                return;
+            }
+
+            // Check for duplicate serial number (excluding current item)
+            if (inventory.some(item => item.serialNumber === serialNumber && item.id !== itemId)) {
+                showAlert('An item with this serial number already exists.', 'danger');
+                return;
+            }
+
+            // Validate assignment
+            if (itemStatus === 'Assigned' && !assignedTo) {
+                showAlert('Please specify who the item is assigned to.', 'danger');
+                return;
+            }
+
+            // Update item
+            const itemIndex = inventory.findIndex(i => i.id === itemId);
+            if (itemIndex !== -1) {
+                inventory[itemIndex] = {
+                    ...inventory[itemIndex],
+                    name: itemName,
+                    type: itemType,
+                    serialNumber: serialNumber,
+                    status: itemStatus,
+                    assignedTo: itemStatus === 'Assigned' ? assignedTo : '',
+                    description: itemDescription
+                };
+
+                saveInventory();
+                updateInventoryDisplay();
+                updateCadetDisplay();
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editItemModal'));
+                modal.hide();
+
+                showAlert('Item updated successfully!', 'success');
+            }
+        }
+
+        // Delete item
+        function deleteItem(itemId) {
+            currentItemToDelete = itemId;
+            const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+            modal.show();
+
+            document.getElementById('confirmDeleteBtn').onclick = function() {
+                const itemIndex = inventory.findIndex(i => i.id === currentItemToDelete);
+                if (itemIndex !== -1) {
+                    inventory.splice(itemIndex, 1);
+                    saveInventory();
+                    updateInventoryDisplay();
+                    updateCadetDisplay();
+                    
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
+                    modal.hide();
+                    
+                    showAlert('Item deleted successfully!', 'success');
+                }
+                currentItemToDelete = null;
+            };
+        }
+
+        // Show item details for cadet view
+        function showItemDetails(itemId) {
+            const item = inventory.find(i => i.id === itemId);
+            if (!item) return;
+
+            currentItemForDetails = item;
+
+            const content = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Item Information</h6>
+                        <p><strong>Name:</strong> ${escapeHtml(item.name)}</p>
+                        <p><strong>Type:</strong> <span class="badge bg-info">${escapeHtml(item.type)}</span></p>
+                        <p><strong>Serial/ID:</strong> <code>${escapeHtml(item.serialNumber)}</code></p>
+                        <p><strong>Status:</strong> 
+                            <span class="badge ${item.status === 'In Inventory' ? 'bg-success' : 'bg-warning text-dark'}">
+                                ${escapeHtml(item.status)}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Availability</h6>
+                        ${item.status === 'Assigned' ? 
+                            `<p><strong>Currently assigned to:</strong> ${escapeHtml(item.assignedTo)}</p>
+                             <p class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>This item is not currently available.</p>` :
+                            `<p class="text-success"><i class="fas fa-check-circle me-1"></i>This item is available for assignment.</p>`
+                        }
+                        ${item.description ? `<p><strong>Description:</strong> ${escapeHtml(item.description)}</p>` : ''}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('itemDetailsContent').innerHTML = content;
+
+            // Show/hide request button based on availability
+            const requestBtn = document.getElementById('requestItemBtn');
+            if (item.status === 'In Inventory') {
+                requestBtn.style.display = 'inline-block';
+            } else {
+                requestBtn.style.display = 'none';
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('itemDetailsModal'));
+            modal.show();
+        }
+
+        // Request item - show the request form modal
+        function requestItem() {
+            if (!currentItemForDetails || currentItemForDetails.status !== 'In Inventory') return;
+
+            // Populate the item information in the request modal
+            const itemInfo = `
+                <strong>Item:</strong> ${escapeHtml(currentItemForDetails.name)}<br>
+                <strong>Type:</strong> <span class="badge bg-info">${escapeHtml(currentItemForDetails.type)}</span><br>
+                <strong>Serial/ID:</strong> <code>${escapeHtml(currentItemForDetails.serialNumber)}</code>
+                ${currentItemForDetails.description ? `<br><strong>Description:</strong> ${escapeHtml(currentItemForDetails.description)}` : ''}
+            `;
+            
+            document.getElementById('requestItemInfo').innerHTML = itemInfo;
+            document.getElementById('requestItemId').value = currentItemForDetails.id;
+            
+            // Clear the form
+            document.getElementById('cadetName').value = '';
+            document.getElementById('cadetId').value = '';
+            
+            // Hide the item details modal
+            const itemDetailsModal = bootstrap.Modal.getInstance(document.getElementById('itemDetailsModal'));
+            itemDetailsModal.hide();
+            
+            // Show the request modal
+            const requestModal = new bootstrap.Modal(document.getElementById('requestItemModal'));
+            requestModal.show();
+        }
+
+        // Submit the item request
+        function submitItemRequest() {
+            const itemId = document.getElementById('requestItemId').value;
+            const cadetName = document.getElementById('cadetName').value.trim();
+            const cadetId = document.getElementById('cadetId').value.trim();
+            
+            // Validation
+            if (!cadetName || !cadetId) {
+                showAlert('Please fill in both your name and CAP ID.', 'danger');
+                return;
+            }
+            
+            // Find the item
+            const itemIndex = inventory.findIndex(item => item.id === itemId);
+            if (itemIndex === -1) {
+                showAlert('Item not found.', 'danger');
+                return;
+            }
+            
+            const item = inventory[itemIndex];
+            
+            // Check if item is still available
+            if (item.status !== 'In Inventory') {
+                showAlert('This item is no longer available for request.', 'warning');
+                return;
+            }
+            
+            // Update the item status
+            inventory[itemIndex].status = 'Assigned';
+            inventory[itemIndex].assignedTo = `${cadetName} (${cadetId})`;
+            inventory[itemIndex].dateAssigned = new Date().toISOString();
+            
+            // Save to localStorage
+            saveInventory();
+            
+            // Update all displays
+            updateInventoryDisplay();
+            updateCadetDisplay();
+            
+            // Hide the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('requestItemModal'));
+            modal.hide();
+            
+            // Show success message
+            showAlert(`Request submitted successfully! "${item.name}" has been assigned to ${cadetName}.`, 'success');
+        }
+
+        // Clear filters
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterType').value = '';
+            document.getElementById('filterStatus').value = '';
+            updateInventoryDisplay();
+        }
+
+        // Show alert messages
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertId = 'alert-' + Date.now();
+            
+            const alertHTML = `
+                <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                    ${escapeHtml(message)}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            alertContainer.insertAdjacentHTML('beforeend', alertHTML);
+            
+            // Auto-remove alert after 5 seconds
+            setTimeout(() => {
+                const alert = document.getElementById(alertId);
+                if (alert) {
+                    const bsAlert = bootstrap.Alert.getInstance(alert);
+                    if (bsAlert) {
+                        bsAlert.close();
+                    }
+                }
+            }, 5000);
+        }
+
+        // Utility function to escape HTML
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+    </script>
 </body>
 </html>
