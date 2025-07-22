@@ -1281,31 +1281,10 @@
             updateInventoryDisplay();
         }
 
-        // Show alert messages
+        // Show alert messages (disabled - no popups)
         function showAlert(message, type) {
-            const alertContainer = document.getElementById('alertContainer');
-            const alertId = 'alert-' + Date.now();
-            
-            const alertHTML = `
-                <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
-                    ${escapeHtml(message)}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            `;
-            
-            alertContainer.insertAdjacentHTML('beforeend', alertHTML);
-            
-            // Auto-remove alert after 3.5 seconds
-            setTimeout(() => {
-                const alert = document.getElementById(alertId);
-                if (alert) {
-                    const bsAlert = bootstrap.Alert.getInstance(alert);
-                    if (bsAlert) {
-                        bsAlert.close();
-                    }
-                }
-            }, 3500);
+            // Popups disabled - only log to console for debugging
+            console.log(`Alert (${type}): ${message}`);
         }
 
         // Utility function to escape HTML
