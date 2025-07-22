@@ -740,6 +740,7 @@
             
             // Set up real-time updates
             InventoryDB.onInventoryUpdate((items) => {
+                console.log('Real-time update received:', items);
                 inventory = items;
                 updateInventoryDisplay();
                 updateCadetDisplay();
@@ -757,15 +758,25 @@
                 } else {
                     showAlert(`Loaded ${inventory.length} items from database.`, 'success');
                 }
+                // Update displays after loading
+                updateInventoryDisplay();
+                updateCadetDisplay();
             } catch (error) {
                 console.error('Error loading inventory:', error);
                 showAlert(`Error connecting to Firebase: ${error.message}. Please check your connection.`, 'danger');
             }
         }
 
-        // Make functions available globally
+        // Make functions and variables available globally
         window.loadInventory = loadInventory;
-        window.inventory = inventory;
+        window.updateInventoryDisplay = updateInventoryDisplay;
+        window.updateCadetDisplay = updateCadetDisplay;
+        
+        // Ensure inventory is accessible globally
+        Object.defineProperty(window, 'inventory', {
+            get: function() { return inventory; },
+            set: function(value) { inventory = value; }
+        });
     </script>
     
     <script>
@@ -904,9 +915,20 @@
 
         // Update inventory display
         function updateInventoryDisplay() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const typeFilter = document.getElementById('filterType').value;
-            const statusFilter = document.getElementById('filterStatus').value;
+            console.log('updateInventoryDisplay called, inventory length:', inventory.length);
+            
+            const searchInput = document.getElementById('searchInput');
+            const typeFilterInput = document.getElementById('filterType');
+            const statusFilterInput = document.getElementById('filterStatus');
+            
+            if (!searchInput || !typeFilterInput || !statusFilterInput) {
+                console.log('Search/filter inputs not found, skipping display update');
+                return;
+            }
+            
+            const searchTerm = searchInput.value.toLowerCase();
+            const typeFilter = typeFilterInput.value;
+            const statusFilter = statusFilterInput.value;
 
             let filteredInventory = inventory.filter(item => {
                 const matchesSearch = item.name.toLowerCase().includes(searchTerm) ||
@@ -921,6 +943,8 @@
             const tableBody = document.getElementById('inventoryTableBody');
             const emptyState = document.getElementById('emptyInventory');
             const itemCount = document.getElementById('itemCount');
+
+            console.log('Filtered inventory length:', filteredInventory.length);
 
             if (filteredInventory.length === 0) {
                 tableBody.innerHTML = '';
