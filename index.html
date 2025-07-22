@@ -629,8 +629,8 @@
             projectId: "squadron-72-9de07",
             storageBucket: "squadron-72-9de07.firebasestorage.app",
             messagingSenderId: "967172350599",
-            appId: "1:967172350599:web:77df7ea23ed9ed57774e22",
-            measurementId: "G-G8D9TP2711"
+            appId: "1:967172350599:web:fe2c863b40c944e1774e22",
+            measurementId: "G-VFQQE5WM1G"
         };
 
         // Initialize Firebase
@@ -647,6 +647,7 @@
             // Add new inventory item
             async addItem(itemData) {
                 try {
+                    console.log('Attempting to add item to Firebase:', itemData);
                     const itemsRef = ref(database, 'inventory');
                     const newItemRef = push(itemsRef);
                     const newItem = {
@@ -656,10 +657,15 @@
                         updatedAt: new Date().toISOString()
                     };
                     await set(newItemRef, newItem);
+                    console.log('Successfully added item to Firebase:', newItem);
                     return { success: true, id: newItemRef.key, item: newItem };
                 } catch (error) {
-                    console.error('Error adding item:', error);
-                    return { success: false, error: error.message };
+                    console.error('Error adding item to Firebase:', error);
+                    if (error.code === 'PERMISSION_DENIED') {
+                        return { success: false, error: 'Database access denied. Please check Firebase security rules.' };
+                    } else {
+                        return { success: false, error: `Firebase error: ${error.message}` };
+                    }
                 }
             },
 
@@ -672,11 +678,18 @@
                         const data = snapshot.val();
                         return Object.values(data);
                     } else {
+                        console.log('No inventory items found in database - starting fresh');
                         return [];
                     }
                 } catch (error) {
                     console.error('Error getting items:', error);
-                    return [];
+                    if (error.code === 'PERMISSION_DENIED') {
+                        throw new Error('Database access denied. Please check Firebase security rules.');
+                    } else if (error.code === 'NETWORK_ERROR') {
+                        throw new Error('Network error. Please check your internet connection.');
+                    } else {
+                        throw new Error(`Firebase error: ${error.message}`);
+                    }
                 }
             },
 
@@ -736,12 +749,17 @@
         // Load inventory from Firebase
         async function loadInventory() {
             try {
-                showAlert('Loading inventory...', 'info');
+                showAlert('Loading inventory from Firebase...', 'info');
                 inventory = await InventoryDB.getAllItems();
                 console.log('Loaded inventory:', inventory);
+                if (inventory.length === 0) {
+                    showAlert('Inventory loaded successfully. Database is empty - ready to add items!', 'success');
+                } else {
+                    showAlert(`Loaded ${inventory.length} items from database.`, 'success');
+                }
             } catch (error) {
                 console.error('Error loading inventory:', error);
-                showAlert('Error loading inventory. Please refresh the page.', 'danger');
+                showAlert(`Error connecting to Firebase: ${error.message}. Please check your connection.`, 'danger');
             }
         }
 
