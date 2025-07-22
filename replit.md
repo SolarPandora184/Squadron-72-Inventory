@@ -68,8 +68,8 @@ Preferred communication style: Simple, everyday language.
   - Firebase Realtime Database
 
 ### Firebase Configuration
-- **Project**: squadron-72
-- **Database URL**: https://squadron-72-default-rtdb.firebaseio.com
+- **Project**: squadron-72-9de07
+- **Database URL**: https://squadron-72-9de07-default-rtdb.firebaseio.com
 - **Real-time Updates**: Enabled for inventory synchronization
 - **Security Rules**: Default (needs review for production)
 
