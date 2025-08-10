@@ -999,7 +999,7 @@
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Adding...';
             submitBtn.disabled = true;
 
-            // Create new item data
+            // Create new item data with proper quantity tracking
             const newItemData = {
                 name: itemName,
                 type: itemType,
@@ -1016,7 +1016,8 @@
                     cadetName: assignedTo,
                     capId: assignedCapId,
                     quantity: 1,
-                    checkoutDate: new Date().toISOString()
+                    checkoutDate: new Date().toISOString(),
+                    id: Date.now().toString()
                 }] : []
             };
 
@@ -1150,6 +1151,11 @@
                                 <button class="btn btn-outline-success" onclick="checkoutItem('${item.id}')" title="Check Out" ${availableQty === 0 ? 'disabled' : ''}>
                                     <i class="fas fa-hand-paper"></i>
                                 </button>
+                                ${checkedOutQty > 0 ? `
+                                    <button class="btn btn-outline-warning" onclick="checkinItem('${item.id}')" title="Check In">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                ` : ''}
                                 <button class="btn btn-outline-danger" onclick="deleteItem('${item.id}')" title="Delete">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -1503,24 +1509,37 @@
         // Checkout item function
         function checkoutItem(itemId) {
             const item = inventory.find(i => i.id === itemId);
-            if (!item) return;
+            if (!item) {
+                showAlert('Item not found.', 'danger');
+                return;
+            }
             
-            const availableQty = item.availableQuantity !== undefined ? item.availableQuantity : (item.status === 'In Inventory' ? (item.totalQuantity || 1) : 0);
+            // Calculate available quantity properly
+            const totalQty = item.totalQuantity || 1;
+            const checkedOutQty = item.checkedOutQuantity || 0;
+            const availableQty = item.availableQuantity !== undefined ? item.availableQuantity : (totalQty - checkedOutQty);
             
-            if (availableQty === 0) {
+            if (availableQty <= 0) {
                 showAlert('No items available for checkout.', 'warning');
                 return;
             }
 
+            // Set up the checkout form
             document.getElementById('checkoutItemId').value = item.id;
             document.getElementById('checkoutQty').max = availableQty;
-            document.getElementById('checkoutQty').value = 1;
+            document.getElementById('checkoutQty').value = Math.min(1, availableQty);
+            
+            // Clear previous form data
+            document.getElementById('checkoutCadetName').value = '';
+            document.getElementById('checkoutCapId').value = '';
             
             const checkoutInfo = `
                 <strong>Item:</strong> ${escapeHtml(item.name)}<br>
                 <strong>Type:</strong> ${escapeHtml(item.type)}<br>
                 <strong>Serial/ID:</strong> ${escapeHtml(item.serialNumber)}<br>
-                <strong>Available Quantity:</strong> ${availableQty}
+                <strong>Total Quantity:</strong> ${totalQty}<br>
+                <strong>Available Quantity:</strong> <span class="badge ${availableQty > 0 ? 'bg-success' : 'bg-danger'}">${availableQty}</span><br>
+                <strong>Checked Out:</strong> ${checkedOutQty}
             `;
             document.getElementById('checkoutItemInfo').innerHTML = checkoutInfo;
             
@@ -1540,13 +1559,24 @@
                 return;
             }
             
+            if (quantity < 1) {
+                showAlert('Quantity must be at least 1.', 'danger');
+                return;
+            }
+            
             const item = inventory.find(i => i.id === itemId);
-            if (!item) return;
+            if (!item) {
+                showAlert('Item not found.', 'danger');
+                return;
+            }
             
-            const availableQty = item.availableQuantity !== undefined ? item.availableQuantity : (item.status === 'In Inventory' ? (item.totalQuantity || 1) : 0);
+            // Ensure we have proper quantity tracking
+            const totalQty = item.totalQuantity || 1;
+            const currentCheckedOut = item.checkedOutQuantity || 0;
+            const currentAvailable = item.availableQuantity !== undefined ? item.availableQuantity : (totalQty - currentCheckedOut);
             
-            if (quantity > availableQty) {
-                showAlert('Quantity exceeds available items.', 'danger');
+            if (quantity > currentAvailable) {
+                showAlert(`Only ${currentAvailable} items available for checkout.`, 'danger');
                 return;
             }
             
@@ -1556,43 +1586,107 @@
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Checking Out...';
             submitBtn.disabled = true;
             
-            // Update item with checkout information
-            const newAvailableQty = availableQty - quantity;
-            const newCheckedOutQty = (item.checkedOutQuantity || 0) + quantity;
-            const checkouts = item.checkouts || [];
-            
-            checkouts.push({
-                cadetName: cadetName,
-                capId: capId,
-                quantity: quantity,
-                checkoutDate: new Date().toISOString()
-            });
-            
-            const updates = {
-                availableQuantity: newAvailableQty,
-                checkedOutQuantity: newCheckedOutQty,
-                checkouts: checkouts,
-                // Keep legacy fields for compatibility but hide details from cadet view
-                assignedTo: checkouts.length > 0 ? `${checkouts.length} checkout(s)` : '',
-                assignedCapId: checkouts.length > 0 ? 'Multiple' : ''
-            };
-            
-            const result = await InventoryDB.updateItem(itemId, updates);
-            
-            if (result.success) {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
-                modal.hide();
-                showAlert(`Successfully checked out ${quantity} ${item.name}(s) to ${cadetName}.`, 'success');
+            try {
+                // Calculate new quantities
+                const newAvailableQty = currentAvailable - quantity;
+                const newCheckedOutQty = currentCheckedOut + quantity;
+                const checkouts = Array.isArray(item.checkouts) ? [...item.checkouts] : [];
                 
-                // Reset form
-                document.getElementById('checkoutForm').reset();
-            } else {
-                showAlert(`Error checking out item: ${result.error}`, 'danger');
+                // Add new checkout record
+                checkouts.push({
+                    cadetName: cadetName,
+                    capId: capId,
+                    quantity: quantity,
+                    checkoutDate: new Date().toISOString(),
+                    id: Date.now().toString() // Add unique ID for potential future check-in
+                });
+                
+                // Determine status based on availability
+                let newStatus = 'In Inventory';
+                if (newAvailableQty === 0) {
+                    newStatus = 'Checked Out';
+                } else if (newCheckedOutQty > 0) {
+                    newStatus = 'Partially Available';
+                }
+                
+                const updates = {
+                    availableQuantity: newAvailableQty,
+                    checkedOutQuantity: newCheckedOutQty,
+                    checkouts: checkouts,
+                    status: newStatus,
+                    // Update legacy fields for compatibility
+                    assignedTo: checkouts.length > 0 ? `${checkouts.length} checkout(s)` : '',
+                    assignedCapId: checkouts.length > 0 ? 'Multiple' : '',
+                    updatedAt: new Date().toISOString()
+                };
+                
+                const result = await InventoryDB.updateItem(itemId, updates);
+                
+                if (result.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
+                    modal.hide();
+                    showAlert(`Successfully checked out ${quantity} ${item.name}(s) to ${cadetName}.`, 'success');
+                    
+                    // Reset form
+                    document.getElementById('checkoutForm').reset();
+                } else {
+                    showAlert(`Error checking out item: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                console.error('Checkout error:', error);
+                showAlert('An error occurred during checkout. Please try again.', 'danger');
             }
             
             // Restore button state
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
+        }
+
+        // Check-in item function
+        async function checkinItem(itemId) {
+            const item = inventory.find(i => i.id === itemId);
+            if (!item) {
+                showAlert('Item not found.', 'danger');
+                return;
+            }
+            
+            const checkouts = item.checkouts || [];
+            if (checkouts.length === 0) {
+                showAlert('No checkouts found for this item.', 'warning');
+                return;
+            }
+            
+            // Show simple check-in dialog
+            const checkinChoice = confirm(`Check in all items for ${item.name}?\n\nThis will return all checked-out quantities to inventory.`);
+            if (!checkinChoice) return;
+            
+            try {
+                // Calculate quantities to return
+                const totalCheckedOut = item.checkedOutQuantity || 0;
+                const currentAvailable = item.availableQuantity || 0;
+                const newAvailableQty = currentAvailable + totalCheckedOut;
+                
+                const updates = {
+                    availableQuantity: newAvailableQty,
+                    checkedOutQuantity: 0,
+                    checkouts: [],
+                    status: 'In Inventory',
+                    assignedTo: '',
+                    assignedCapId: '',
+                    updatedAt: new Date().toISOString()
+                };
+                
+                const result = await InventoryDB.updateItem(itemId, updates);
+                
+                if (result.success) {
+                    showAlert(`Successfully checked in all ${totalCheckedOut} ${item.name}(s).`, 'success');
+                } else {
+                    showAlert(`Error checking in item: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                console.error('Check-in error:', error);
+                showAlert('An error occurred during check-in. Please try again.', 'danger');
+            }
         }
 
         // Clear filters function
