@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Squadron 72 Admin Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --cap-blue: #003366;
+            --cap-gold: #FFD700;
+            --cap-light-blue: #4A90E2;
+            --cap-gray: #6C757D;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+
+        .btn-primary {
+            background-color: var(--cap-blue);
+            border-color: var(--cap-blue);
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark" style="background-color: var(--cap-blue);">
+        <div class="container">
+            <span class="navbar-brand">
+                <i class="fas fa-shield-alt me-2"></i>Squadron 72 Admin Portal
+            </span>
+            <div id="userInfo" class="d-none">
+                <span class="text-light me-3" id="userName">Welcome</span>
+                <a href="/api/logout" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4" id="mainContent" style="display: none;">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Admin access verified. You can now manage inventory, assign admin roles, and access all system features.
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Admin Controls</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <a href="/" class="btn btn-primary w-100">
+                                    <i class="fas fa-boxes me-2"></i>Manage Inventory
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <button class="btn btn-secondary w-100" onclick="showUserManagement()">
+                                    <i class="fas fa-users me-2"></i>Manage Users
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Required Message -->
+    <div class="auth-container" id="authRequired">
+        <div class="auth-card">
+            <div class="mb-4">
+                <i class="fas fa-shield-alt" style="font-size: 3rem; color: var(--cap-blue);"></i>
+            </div>
+            <h3 class="mb-4">Admin Access Required</h3>
+            <p class="text-muted mb-4">This portal requires administrator privileges. Please log in with your authorized account.</p>
+            <a href="/api/login" class="btn btn-primary btn-lg">
+                <i class="fas fa-sign-in-alt me-2"></i>Log In
+            </a>
+        </div>
+    </div>
+
+    <!-- Access Denied Message -->
+    <div class="auth-container" id="accessDenied" style="display: none;">
+        <div class="auth-card">
+            <div class="mb-4">
+                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #dc3545;"></i>
+            </div>
+            <h3 class="mb-4">Access Denied</h3>
+            <div class="alert alert-warning">
+                <strong>Administrator Access Required</strong><br>
+                Your account does not have administrator privileges. Contact your squadron administrator to request access.
+            </div>
+            <p class="text-muted">If you believe this is an error, please contact your system administrator.</p>
+            <div class="mt-4">
+                <a href="/" class="btn btn-secondary me-2">
+                    <i class="fas fa-home me-1"></i>Cadet Portal
+                </a>
+                <a href="/api/logout" class="btn btn-outline-danger">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Check authentication and admin status
+        async function checkAuth() {
+            try {
+                // Check if user is authenticated
+                const userResponse = await fetch('/api/auth/user');
+                if (!userResponse.ok) {
+                    throw new Error('Not authenticated');
+                }
+                const user = await userResponse.json();
+                
+                // Check if user is admin
+                const adminResponse = await fetch('/api/auth/admin');
+                if (!adminResponse.ok) {
+                    throw new Error('Admin check failed');
+                }
+                const adminStatus = await adminResponse.json();
+                
+                if (adminStatus.isAdmin) {
+                    // User is admin - show admin interface
+                    document.getElementById('authRequired').style.display = 'none';
+                    document.getElementById('accessDenied').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    document.getElementById('userInfo').classList.remove('d-none');
+                    document.getElementById('userName').textContent = `Welcome, ${user.firstName || user.email}`;
+                } else {
+                    // User is authenticated but not admin
+                    document.getElementById('authRequired').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'none';
+                    document.getElementById('accessDenied').style.display = 'flex';
+                }
+                
+            } catch (error) {
+                // User is not authenticated
+                document.getElementById('authRequired').style.display = 'flex';
+                document.getElementById('accessDenied').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'none';
+            }
+        }
+
+        function showUserManagement() {
+            alert('User management interface coming soon! For now, you can directly update user admin status in the database.');
+        }
+
+        // Check auth status on page load
+        checkAuth();
+    </script>
+</body>
+</html>

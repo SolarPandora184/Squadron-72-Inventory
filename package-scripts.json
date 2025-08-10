@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "start": "ts-node server/index.ts",
+    "dev": "ts-node server/index.ts"
+  }
+}
