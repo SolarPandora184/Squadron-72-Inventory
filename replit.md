@@ -108,6 +108,8 @@ Preferred communication style: Simple, everyday language.
 9. ✅ **NEW:** Implemented check-in/check-out transaction tracking
 10. ✅ **FIXED:** Resolved multiple checkout issue - system now properly tracks quantities
 11. ✅ **ADDED:** Check-in functionality to return items to inventory
+12. ✅ **ADDED:** Individual item return system - can return specific checkout records
+13. ✅ **CHANGED:** Removed serial number uniqueness requirement - multiple items can share same serial/ID
 
 ### Immediate Needs
 1. Review and configure Firebase security rules for production

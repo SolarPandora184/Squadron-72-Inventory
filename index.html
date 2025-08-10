@@ -981,11 +981,7 @@
                 return;
             }
 
-            // Check for duplicate serial number
-            if (inventory.some(item => item.serialNumber === serialNumber)) {
-                showAlert('An item with this serial number already exists.', 'danger');
-                return;
-            }
+            // Serial numbers can be duplicated (removed uniqueness check)
 
             // Validate assignment
             if (itemStatus === 'Assigned' && (!assignedTo || !assignedCapId)) {
