@@ -30,8 +30,11 @@ Preferred communication style: Simple, everyday language.
   - Automatic data validation and error handling
   - Secure cloud-based storage with squadron-72 project
 - **Data Structure**: 
-  - `/inventory/{itemId}` - Individual inventory items with metadata
+  - `/inventory/{itemId}` - Individual inventory items with enhanced metadata
   - Real-time listeners for instant UI updates
+  - **NEW:** Quantity tracking with totalQuantity, availableQuantity, checkedOutQuantity
+  - **NEW:** Checkout history with cadet names, CAP IDs, and timestamps
+  - **NEW:** Multi-assignment support for tracking multiple cadets per item
 
 ## Key Components
 
@@ -93,18 +96,24 @@ Preferred communication style: Simple, everyday language.
 
 ## Development Roadmap
 
-### Recently Completed (July 2025)
+### Recently Completed (August 2025)
 1. ✅ Migrated from Replit Agent to Replit environment
 2. ✅ Integrated Firebase Realtime Database for persistent storage
 3. ✅ Implemented real-time data synchronization
 4. ✅ Updated all CRUD operations to use Firebase
 5. ✅ Added loading states and error handling
+6. ✅ **NEW:** Implemented quantity tracking system with grouping
+7. ✅ **NEW:** Added checkout functionality with CAP ID validation
+8. ✅ **NEW:** Enhanced filtering system with status-based search
+9. ✅ **NEW:** Implemented check-in/check-out transaction tracking
 
 ### Immediate Needs
 1. Review and configure Firebase security rules for production
 2. Implement user authentication with Firebase Auth
 3. Add role-based access control (Admin vs Cadet permissions)
-4. Implement audit logging for inventory transactions
+4. ✅ **COMPLETED:** Implement audit logging for inventory transactions
+5. Add return/check-in functionality for checked-out items
+6. Implement reporting dashboard for checkout history
 
 ### Long-term Goals
 1. User authentication and authorization system
