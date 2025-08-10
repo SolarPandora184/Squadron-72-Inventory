@@ -1381,18 +1381,35 @@
 
         // Request item - show the request form modal
         function requestItem() {
-            if (!currentItemForDetails || currentItemForDetails.status !== 'In Inventory') return;
+            if (!currentItemForDetails) return;
+
+            // Calculate availability
+            const totalQty = currentItemForDetails.totalQuantity || 1;
+            const currentCheckedOut = currentItemForDetails.checkedOutQuantity || 0;
+            const currentAvailable = currentItemForDetails.availableQuantity !== undefined ? 
+                currentItemForDetails.availableQuantity : (totalQty - currentCheckedOut);
+
+            if (currentAvailable <= 0) {
+                showAlert('No items available for request.', 'warning');
+                return;
+            }
 
             // Populate the item information in the request modal
             const itemInfo = `
                 <strong>Item:</strong> ${escapeHtml(currentItemForDetails.name)}<br>
                 <strong>Type:</strong> <span class="badge bg-info">${escapeHtml(currentItemForDetails.type)}</span><br>
-                <strong>Serial/ID:</strong> <code>${escapeHtml(currentItemForDetails.serialNumber)}</code>
+                <strong>Serial/ID:</strong> <code>${escapeHtml(currentItemForDetails.serialNumber)}</code><br>
+                <strong>Available Quantity:</strong> <span class="badge bg-success">${currentAvailable}</span>
                 ${currentItemForDetails.description ? `<br><strong>Description:</strong> ${escapeHtml(currentItemForDetails.description)}` : ''}
             `;
             
             document.getElementById('requestItemInfo').innerHTML = itemInfo;
             document.getElementById('requestItemId').value = currentItemForDetails.id;
+            
+            // Set up quantity field
+            const qtyField = document.getElementById('checkoutQuantity');
+            qtyField.max = currentAvailable;
+            qtyField.value = Math.min(1, currentAvailable);
             
             // Clear the form
             document.getElementById('cadetName').value = '';
@@ -1412,10 +1429,16 @@
             const itemId = document.getElementById('requestItemId').value;
             const cadetName = document.getElementById('cadetName').value.trim();
             const cadetId = document.getElementById('cadetId').value.trim();
+            const requestedQty = parseInt(document.getElementById('checkoutQuantity').value) || 1;
             
             // Validation
             if (!cadetName || !cadetId) {
                 showAlert('Please fill in both your name and CAP ID.', 'danger');
+                return;
+            }
+            
+            if (requestedQty < 1) {
+                showAlert('Quantity must be at least 1.', 'danger');
                 return;
             }
             
@@ -1426,9 +1449,14 @@
                 return;
             }
             
-            // Check if item is still available
-            if (item.status !== 'In Inventory') {
-                showAlert('This item is no longer available for request.', 'warning');
+            // Calculate current availability using the same logic as checkout
+            const totalQty = item.totalQuantity || 1;
+            const currentCheckedOut = item.checkedOutQuantity || 0;
+            const currentAvailable = item.availableQuantity !== undefined ? item.availableQuantity : (totalQty - currentCheckedOut);
+            
+            // Check if enough items are available
+            if (requestedQty > currentAvailable) {
+                showAlert(`Only ${currentAvailable} items available. Please reduce your request.`, 'warning');
                 return;
             }
 
@@ -1438,24 +1466,55 @@
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
             submitBtn.disabled = true;
             
-            // Update the item status
-            const updates = {
-                status: 'Assigned',
-                assignedTo: `${cadetName} (${cadetId})`,
-                dateAssigned: new Date().toISOString()
-            };
-
-            const result = await InventoryDB.updateItem(itemId, updates);
-
-            if (result.success) {
-                // Hide the modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('requestItemModal'));
-                modal.hide();
+            try {
+                // Calculate new quantities using checkout logic
+                const newAvailableQty = currentAvailable - requestedQty;
+                const newCheckedOutQty = currentCheckedOut + requestedQty;
+                const checkouts = Array.isArray(item.checkouts) ? [...item.checkouts] : [];
                 
-                // Show success message
-                showAlert(`Request submitted successfully! "${item.name}" has been assigned to ${cadetName}.`, 'success');
-            } else {
-                showAlert(`Error submitting request: ${result.error}`, 'danger');
+                // Add new checkout record
+                checkouts.push({
+                    cadetName: cadetName,
+                    capId: cadetId,
+                    quantity: requestedQty,
+                    checkoutDate: new Date().toISOString(),
+                    id: Date.now().toString()
+                });
+                
+                // Determine status based on availability
+                let newStatus = 'In Inventory';
+                if (newAvailableQty === 0) {
+                    newStatus = 'Checked Out';
+                } else if (newCheckedOutQty > 0) {
+                    newStatus = 'Partially Available';
+                }
+                
+                const updates = {
+                    availableQuantity: newAvailableQty,
+                    checkedOutQuantity: newCheckedOutQty,
+                    checkouts: checkouts,
+                    status: newStatus,
+                    assignedTo: checkouts.length > 0 ? `${checkouts.length} checkout(s)` : '',
+                    assignedCapId: checkouts.length > 0 ? 'Multiple' : '',
+                    dateAssigned: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                const result = await InventoryDB.updateItem(itemId, updates);
+
+                if (result.success) {
+                    // Hide the modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('requestItemModal'));
+                    modal.hide();
+                    
+                    // Show success message
+                    showAlert(`Request submitted successfully! ${requestedQty} ${item.name}(s) checked out to ${cadetName}.`, 'success');
+                } else {
+                    showAlert(`Error submitting request: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                console.error('Request submission error:', error);
+                showAlert('An error occurred during request submission. Please try again.', 'danger');
             }
 
             // Restore button state
