@@ -411,7 +411,7 @@
                                             <th>Total Qty</th>
                                             <th>Available</th>
                                             <th>Status</th>
-                                            <th>Checked Out To</th>
+                                            <th>Checked Out To (Individual Returns)</th>
                                             <th>CAP IDs</th>
                                             <th>Actions</th>
                                         </tr>
@@ -1129,9 +1129,14 @@
                         <td>
                             ${item.checkouts && item.checkouts.length > 0 ? 
                                 item.checkouts.map(checkout => `
-                                    <div class="mb-1">
-                                        <small class="d-block">${escapeHtml(checkout.cadetName)} (${escapeHtml(checkout.capId)})</small>
-                                        <small class="text-muted">Qty: ${checkout.quantity} - ${new Date(checkout.checkoutDate).toLocaleDateString()}</small>
+                                    <div class="mb-1 d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <small class="d-block">${escapeHtml(checkout.cadetName)} (${escapeHtml(checkout.capId)})</small>
+                                            <small class="text-muted">Qty: ${checkout.quantity} - ${new Date(checkout.checkoutDate).toLocaleDateString()}</small>
+                                        </div>
+                                        <button class="btn btn-outline-success btn-sm" onclick="checkinSpecific('${item.id}', '${checkout.id}')" title="Check In This Record">
+                                            <i class="fas fa-undo"></i>
+                                        </button>
                                     </div>
                                 `).join('') : 
                                 '<span class="text-muted">-</span>'
@@ -1701,7 +1706,7 @@
             submitBtn.disabled = false;
         }
 
-        // Check-in item function
+        // Check-in all items function (bulk return)
         async function checkinItem(itemId) {
             const item = inventory.find(i => i.id === itemId);
             if (!item) {
@@ -1745,6 +1750,69 @@
             } catch (error) {
                 console.error('Check-in error:', error);
                 showAlert('An error occurred during check-in. Please try again.', 'danger');
+            }
+        }
+
+        // Check-in specific checkout record function
+        async function checkinSpecific(itemId, checkoutId) {
+            const item = inventory.find(i => i.id === itemId);
+            if (!item) {
+                showAlert('Item not found.', 'danger');
+                return;
+            }
+            
+            const checkouts = item.checkouts || [];
+            const checkoutIndex = checkouts.findIndex(c => c.id === checkoutId);
+            
+            if (checkoutIndex === -1) {
+                showAlert('Checkout record not found.', 'danger');
+                return;
+            }
+            
+            const checkout = checkouts[checkoutIndex];
+            
+            // Confirm the check-in
+            const confirmReturn = confirm(`Return ${checkout.quantity} ${item.name}(s) from ${checkout.cadetName} (${checkout.capId})?\n\nChecked out on: ${new Date(checkout.checkoutDate).toLocaleDateString()}`);
+            if (!confirmReturn) return;
+            
+            try {
+                // Calculate new quantities
+                const quantityToReturn = checkout.quantity;
+                const currentAvailable = item.availableQuantity || 0;
+                const currentCheckedOut = item.checkedOutQuantity || 0;
+                
+                const newAvailableQty = currentAvailable + quantityToReturn;
+                const newCheckedOutQty = Math.max(0, currentCheckedOut - quantityToReturn);
+                
+                // Remove the specific checkout record
+                const newCheckouts = checkouts.filter(c => c.id !== checkoutId);
+                
+                // Determine new status
+                let newStatus = 'In Inventory';
+                if (newCheckedOutQty > 0) {
+                    newStatus = 'Partially Available';
+                }
+                
+                const updates = {
+                    availableQuantity: newAvailableQty,
+                    checkedOutQuantity: newCheckedOutQty,
+                    checkouts: newCheckouts,
+                    status: newStatus,
+                    assignedTo: newCheckouts.length > 0 ? `${newCheckouts.length} checkout(s)` : '',
+                    assignedCapId: newCheckouts.length > 0 ? 'Multiple' : '',
+                    updatedAt: new Date().toISOString()
+                };
+                
+                const result = await InventoryDB.updateItem(itemId, updates);
+                
+                if (result.success) {
+                    showAlert(`Successfully returned ${quantityToReturn} ${item.name}(s) from ${checkout.cadetName}.`, 'success');
+                } else {
+                    showAlert(`Error returning item: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                console.error('Specific check-in error:', error);
+                showAlert('An error occurred during return. Please try again.', 'danger');
             }
         }
 
