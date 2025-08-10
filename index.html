@@ -411,7 +411,7 @@
                                             <th>Total Qty</th>
                                             <th>Available</th>
                                             <th>Status</th>
-                                            <th>Assigned To</th>
+                                            <th>Checked Out To</th>
                                             <th>CAP ID</th>
                                             <th>Actions</th>
                                         </tr>
@@ -1061,7 +1061,7 @@
                                     item.serialNumber.toLowerCase().includes(searchTerm) ||
                                     (item.assignedTo && item.assignedTo.toLowerCase().includes(searchTerm));
                 const matchesType = !typeFilter || item.type === typeFilter;
-                const matchesName = !nameFilter || (item.assignedTo && item.assignedTo.toLowerCase().includes(nameFilter));
+                const matchesName = !nameFilter || (item.checkouts && item.checkouts.some(c => c.cadetName.toLowerCase().includes(nameFilter)));
                 
                 // Handle status filtering with new quantity-based logic
                 let matchesStatus = true;
@@ -1075,7 +1075,7 @@
                     } else if (statusFilter === 'Checked Out') {
                         matchesStatus = availableQty === 0 && checkedOutQty > 0;
                     } else if (statusFilter === 'Assigned') {
-                        matchesStatus = item.assignedTo && item.assignedTo.length > 0;
+                        matchesStatus = item.checkouts && item.checkouts.length > 0;
                     }
                 }
                 
@@ -1124,8 +1124,16 @@
                                 ${statusText}
                             </span>
                         </td>
-                        <td>${item.assignedTo ? escapeHtml(item.assignedTo) : '<span class="text-muted">-</span>'}</td>
-                        <td>${item.assignedCapId ? escapeHtml(item.assignedCapId) : '<span class="text-muted">-</span>'}</td>
+                        <td>
+                            ${item.checkouts && item.checkouts.length > 0 ? 
+                                item.checkouts.map(c => `${escapeHtml(c.cadetName)} (${c.quantity})`).join('<br>') : 
+                                '<span class="text-muted">-</span>'}
+                        </td>
+                        <td>
+                            ${item.checkouts && item.checkouts.length > 0 ? 
+                                item.checkouts.map(c => escapeHtml(c.capId)).join('<br>') : 
+                                '<span class="text-muted">-</span>'}
+                        </td>
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <button class="btn btn-outline-primary" onclick="editItem('${item.id}')" title="Edit">
@@ -1567,14 +1575,14 @@
             // Simple status: either In Inventory or Checked Out
             let newStatus = newAvailableQty > 0 ? 'In Inventory' : 'Checked Out';
             
-            // Assign to cadet if any items are checked out
+            // Don't assign to anyone - just track checkouts
             const updates = {
                 availableQuantity: newAvailableQty,
                 checkedOutQuantity: newCheckedOutQty,
                 checkouts: checkouts,
                 status: newStatus,
-                assignedTo: checkouts.map(c => c.cadetName).join(', '),
-                assignedCapId: checkouts.map(c => c.capId).join(', ')
+                assignedTo: '',
+                assignedCapId: ''
             };
             
             const result = await InventoryDB.updateItem(itemId, updates);
