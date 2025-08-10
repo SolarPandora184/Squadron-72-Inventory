@@ -372,8 +372,8 @@
                                 <select class="form-select" id="filterStatus">
                                     <option value="">All Status</option>
                                     <option value="In Inventory">In Inventory</option>
-                                    <option value="Checked Out">Checked Out</option>
                                     <option value="Assigned">Assigned</option>
+                                    <option value="Checked Out">Checked Out</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
@@ -411,7 +411,7 @@
                                             <th>Total Qty</th>
                                             <th>Available</th>
                                             <th>Status</th>
-                                            <th>Checked Out To</th>
+                                            <th>Assigned To</th>
                                             <th>CAP ID</th>
                                             <th>Actions</th>
                                         </tr>
@@ -1061,21 +1061,21 @@
                                     item.serialNumber.toLowerCase().includes(searchTerm) ||
                                     (item.assignedTo && item.assignedTo.toLowerCase().includes(searchTerm));
                 const matchesType = !typeFilter || item.type === typeFilter;
-                const matchesName = !nameFilter || (item.checkouts && item.checkouts.some(c => c.cadetName.toLowerCase().includes(nameFilter)));
+                const matchesName = !nameFilter || (item.assignedTo && item.assignedTo.toLowerCase().includes(nameFilter));
                 
                 // Handle status filtering with new quantity-based logic
                 let matchesStatus = true;
                 if (statusFilter) {
                     const totalQty = item.totalQuantity || 1;
+                    const availableQty = item.availableQuantity !== undefined ? item.availableQuantity : (item.status === 'In Inventory' ? totalQty : 0);
                     const checkedOutQty = item.checkedOutQuantity || 0;
-                    const availableQty = totalQty - checkedOutQty;
                     
                     if (statusFilter === 'In Inventory') {
-                        matchesStatus = availableQty > 0;
+                        matchesStatus = availableQty === totalQty;
                     } else if (statusFilter === 'Checked Out') {
-                        matchesStatus = availableQty === 0 && checkedOutQty > 0;
+                        matchesStatus = checkedOutQty > 0;
                     } else if (statusFilter === 'Assigned') {
-                        matchesStatus = item.checkouts && item.checkouts.length > 0;
+                        matchesStatus = item.assignedTo && item.assignedTo.length > 0;
                     }
                 }
                 
@@ -1097,18 +1097,19 @@
                 itemCount.textContent = `${filteredInventory.length} item${filteredInventory.length !== 1 ? 's' : ''}`;
                 
                 tableBody.innerHTML = filteredInventory.map(item => {
-                    // Handle legacy items and calculate quantities properly
+                    // Handle legacy items that might not have quantity fields
                     const totalQty = item.totalQuantity || 1;
+                    const availableQty = item.availableQuantity !== undefined ? item.availableQuantity : (item.status === 'In Inventory' ? totalQty : 0);
                     const checkedOutQty = item.checkedOutQuantity || 0;
-                    const availableQty = totalQty - checkedOutQty;
                     
-                    // Determine overall status - simplified
-                    let statusText, statusClass;
-                    if (availableQty > 0) {
-                        statusText = 'In Inventory';
-                        statusClass = 'bg-success';
-                    } else {
-                        statusText = 'Checked Out';
+                    // Determine overall status
+                    let statusText = 'In Inventory';
+                    let statusClass = 'bg-success';
+                    if (checkedOutQty > 0 && availableQty > 0) {
+                        statusText = 'Partial Checkout';
+                        statusClass = 'bg-warning text-dark';
+                    } else if (checkedOutQty === totalQty) {
+                        statusText = 'Fully Checked Out';
                         statusClass = 'bg-danger';
                     }
                     
@@ -1124,26 +1125,15 @@
                                 ${statusText}
                             </span>
                         </td>
-                        <td>
-                            ${item.checkouts && item.checkouts.length > 0 ? 
-                                item.checkouts.map(c => `${escapeHtml(c.cadetName)} (${c.quantity})`).join('<br>') : 
-                                '<span class="text-muted">-</span>'}
-                        </td>
-                        <td>
-                            ${item.checkouts && item.checkouts.length > 0 ? 
-                                item.checkouts.map(c => escapeHtml(c.capId)).join('<br>') : 
-                                '<span class="text-muted">-</span>'}
-                        </td>
+                        <td>${item.assignedTo ? escapeHtml(item.assignedTo) : '<span class="text-muted">-</span>'}</td>
+                        <td>${item.assignedCapId ? escapeHtml(item.assignedCapId) : '<span class="text-muted">-</span>'}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <button class="btn btn-outline-primary" onclick="editItem('${item.id}')" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-outline-success" onclick="checkoutItem('${item.id}')" title="Check Out" ${availableQty <= 0 ? 'disabled' : ''}>
+                                <button class="btn btn-outline-success" onclick="checkoutItem('${item.id}')" title="Check Out" ${availableQty === 0 ? 'disabled' : ''}>
                                     <i class="fas fa-hand-paper"></i>
-                                </button>
-                                <button class="btn btn-outline-info" onclick="checkinItem('${item.id}')" title="Check In" ${checkedOutQty === 0 ? 'disabled' : ''}>
-                                    <i class="fas fa-undo"></i>
                                 </button>
                                 <button class="btn btn-outline-danger" onclick="deleteItem('${item.id}')" title="Delete">
                                     <i class="fas fa-trash"></i>
@@ -1501,14 +1491,9 @@
             const item = inventory.find(i => i.id === itemId);
             if (!item) return;
             
-            // Calculate available quantity properly
-            const totalQty = item.totalQuantity || 1;
-            const checkedOutQty = item.checkedOutQuantity || 0;
-            const availableQty = totalQty - checkedOutQty;
+            const availableQty = item.availableQuantity !== undefined ? item.availableQuantity : (item.status === 'In Inventory' ? (item.totalQuantity || 1) : 0);
             
-            console.log(`Checkout Debug - Total: ${totalQty}, Checked Out: ${checkedOutQty}, Available: ${availableQty}`);
-            
-            if (availableQty <= 0) {
+            if (availableQty === 0) {
                 showAlert('No items available for checkout.', 'warning');
                 return;
             }
@@ -1544,11 +1529,9 @@
             const item = inventory.find(i => i.id === itemId);
             if (!item) return;
             
-            const totalQty = item.totalQuantity || 1;
-            const checkedOutQty = item.checkedOutQuantity || 0;
-            const currentAvailableQty = totalQty - checkedOutQty;
+            const availableQty = item.availableQuantity !== undefined ? item.availableQuantity : (item.status === 'In Inventory' ? (item.totalQuantity || 1) : 0);
             
-            if (quantity > currentAvailableQty) {
+            if (quantity > availableQty) {
                 showAlert('Quantity exceeds available items.', 'danger');
                 return;
             }
@@ -1559,12 +1542,11 @@
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Checking Out...';
             submitBtn.disabled = true;
             
-            // Calculate new quantities after checkout
-            const newAvailableQty = currentAvailableQty - quantity;
+            // Update item with checkout information
+            const newAvailableQty = availableQty - quantity;
             const newCheckedOutQty = (item.checkedOutQuantity || 0) + quantity;
             const checkouts = item.checkouts || [];
             
-            // Add this checkout to the history
             checkouts.push({
                 cadetName: cadetName,
                 capId: capId,
@@ -1572,17 +1554,12 @@
                 checkoutDate: new Date().toISOString()
             });
             
-            // Simple status: either In Inventory or Checked Out
-            let newStatus = newAvailableQty > 0 ? 'In Inventory' : 'Checked Out';
-            
-            // Don't assign to anyone - just track checkouts
             const updates = {
                 availableQuantity: newAvailableQty,
                 checkedOutQuantity: newCheckedOutQty,
                 checkouts: checkouts,
-                status: newStatus,
-                assignedTo: '',
-                assignedCapId: ''
+                assignedTo: checkouts.map(c => c.cadetName).join(', '),
+                assignedCapId: checkouts.map(c => c.capId).join(', ')
             };
             
             const result = await InventoryDB.updateItem(itemId, updates);
@@ -1603,48 +1580,6 @@
             submitBtn.disabled = false;
         }
 
-        // Check in item function
-        function checkinItem(itemId) {
-            const item = inventory.find(i => i.id === itemId);
-            if (!item) return;
-            
-            const checkedOutQty = item.checkedOutQuantity || 0;
-            
-            if (checkedOutQty === 0) {
-                showAlert('No items are checked out for this item.', 'warning');
-                return;
-            }
-            
-            if (confirm(`Check in all ${checkedOutQty} checked out ${item.name}(s)?`)) {
-                checkinAllItems(itemId);
-            }
-        }
-
-        // Check in all items
-        async function checkinAllItems(itemId) {
-            const item = inventory.find(i => i.id === itemId);
-            if (!item) return;
-            
-            const totalQty = item.totalQuantity || 1;
-            
-            const updates = {
-                availableQuantity: totalQty,
-                checkedOutQuantity: 0,
-                checkouts: [],
-                status: 'In Inventory',
-                assignedTo: '',
-                assignedCapId: ''
-            };
-            
-            const result = await InventoryDB.updateItem(itemId, updates);
-            
-            if (result.success) {
-                showAlert(`All ${item.name}(s) have been checked back in.`, 'success');
-            } else {
-                showAlert(`Error checking in items: ${result.error}`, 'danger');
-            }
-        }
-
         // Clear filters function
         function clearFilters() {
             document.getElementById('searchInput').value = '';
@@ -1652,26 +1587,6 @@
             document.getElementById('filterStatus').value = '';
             document.getElementById('filterByName').value = '';
             updateInventoryDisplay();
-        }
-
-        // Navigation functions
-        function showAdmin() {
-            document.getElementById('homePage').classList.add('hidden');
-            document.getElementById('adminPage').classList.remove('hidden');
-            document.getElementById('cadetPage').classList.add('hidden');
-        }
-
-        function showCadet() {
-            document.getElementById('homePage').classList.add('hidden');
-            document.getElementById('adminPage').classList.add('hidden');
-            document.getElementById('cadetPage').classList.remove('hidden');
-            updateCadetDisplay();
-        }
-
-        function goHome() {
-            document.getElementById('homePage').classList.remove('hidden');
-            document.getElementById('adminPage').classList.add('hidden');
-            document.getElementById('cadetPage').classList.add('hidden');
         }
 
         // Show alert messages (disabled - no popups)
