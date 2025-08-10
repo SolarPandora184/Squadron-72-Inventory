@@ -372,8 +372,7 @@
                                 <select class="form-select" id="filterStatus">
                                     <option value="">All Status</option>
                                     <option value="In Inventory">In Inventory</option>
-                                    <option value="Partially Checked Out">Partially Checked Out</option>
-                                    <option value="Fully Checked Out">Fully Checked Out</option>
+                                    <option value="Checked Out">Checked Out</option>
                                     <option value="Assigned">Assigned</option>
                                 </select>
                             </div>
@@ -1072,15 +1071,11 @@
                     const checkedOutQty = item.checkedOutQuantity || 0;
                     
                     if (statusFilter === 'In Inventory') {
-                        matchesStatus = availableQty === totalQty && checkedOutQty === 0;
+                        matchesStatus = availableQty > 0;
                     } else if (statusFilter === 'Checked Out') {
-                        matchesStatus = checkedOutQty > 0;
+                        matchesStatus = availableQty === 0 && checkedOutQty > 0;
                     } else if (statusFilter === 'Assigned') {
                         matchesStatus = item.assignedTo && item.assignedTo.length > 0;
-                    } else if (statusFilter === 'Partially Checked Out') {
-                        matchesStatus = checkedOutQty > 0 && availableQty > 0;
-                    } else if (statusFilter === 'Fully Checked Out') {
-                        matchesStatus = availableQty === 0 && checkedOutQty > 0;
                     }
                 }
                 
@@ -1107,20 +1102,14 @@
                     const availableQty = item.availableQuantity !== undefined ? item.availableQuantity : (item.status === 'In Inventory' ? totalQty : 0);
                     const checkedOutQty = item.checkedOutQuantity || 0;
                     
-                    // Determine overall status
+                    // Determine overall status - simplified
                     let statusText, statusClass;
-                    if (availableQty === totalQty && checkedOutQty === 0) {
+                    if (availableQty > 0) {
                         statusText = 'In Inventory';
                         statusClass = 'bg-success';
-                    } else if (availableQty > 0 && checkedOutQty > 0) {
-                        statusText = 'Partially Checked Out';
-                        statusClass = 'bg-warning text-dark';
-                    } else if (availableQty === 0 && checkedOutQty > 0) {
-                        statusText = 'Fully Checked Out';
-                        statusClass = 'bg-danger';
                     } else {
-                        statusText = item.status || 'Unknown';
-                        statusClass = 'bg-secondary';
+                        statusText = 'Checked Out';
+                        statusClass = 'bg-danger';
                     }
                     
                     return `
@@ -1144,6 +1133,9 @@
                                 </button>
                                 <button class="btn btn-outline-success" onclick="checkoutItem('${item.id}')" title="Check Out" ${availableQty === 0 ? 'disabled' : ''}>
                                     <i class="fas fa-hand-paper"></i>
+                                </button>
+                                <button class="btn btn-outline-info" onclick="checkinItem('${item.id}')" title="Check In" ${checkedOutQty === 0 ? 'disabled' : ''}>
+                                    <i class="fas fa-undo"></i>
                                 </button>
                                 <button class="btn btn-outline-danger" onclick="deleteItem('${item.id}')" title="Delete">
                                     <i class="fas fa-trash"></i>
@@ -1566,25 +1558,17 @@
                 checkoutDate: new Date().toISOString()
             });
             
-            // Determine status based on available quantity
-            let newStatus;
-            if (newAvailableQty === totalQty) {
-                newStatus = 'In Inventory'; // All items still available
-            } else if (newAvailableQty === 0) {
-                newStatus = 'Fully Checked Out'; // No items available
-            } else {
-                newStatus = 'Partially Checked Out'; // Some available, some checked out
-            }
+            // Simple status: either In Inventory or Checked Out
+            let newStatus = newAvailableQty > 0 ? 'In Inventory' : 'Checked Out';
             
-            // Only assign if ALL items are checked out, otherwise leave unassigned
+            // Assign to cadet if any items are checked out
             const updates = {
                 availableQuantity: newAvailableQty,
                 checkedOutQuantity: newCheckedOutQty,
                 checkouts: checkouts,
                 status: newStatus,
-                // Only set assignedTo/assignedCapId if ALL items are checked out to one person
-                assignedTo: newAvailableQty === 0 && checkouts.length === 1 ? cadetName : '',
-                assignedCapId: newAvailableQty === 0 && checkouts.length === 1 ? capId : ''
+                assignedTo: checkouts.map(c => c.cadetName).join(', '),
+                assignedCapId: checkouts.map(c => c.capId).join(', ')
             };
             
             const result = await InventoryDB.updateItem(itemId, updates);
@@ -1592,7 +1576,7 @@
             if (result.success) {
                 const modal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
                 modal.hide();
-                showAlert(`Successfully checked out ${quantity} ${item.name}(s) to ${cadetName}. ${newAvailableQty} remaining in inventory.`, 'success');
+                showAlert(`Successfully checked out ${quantity} ${item.name}(s) to ${cadetName}.`, 'success');
                 
                 // Reset form
                 document.getElementById('checkoutForm').reset();
@@ -1603,6 +1587,48 @@
             // Restore button state
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
+        }
+
+        // Check in item function
+        function checkinItem(itemId) {
+            const item = inventory.find(i => i.id === itemId);
+            if (!item) return;
+            
+            const checkedOutQty = item.checkedOutQuantity || 0;
+            
+            if (checkedOutQty === 0) {
+                showAlert('No items are checked out for this item.', 'warning');
+                return;
+            }
+            
+            if (confirm(`Check in all ${checkedOutQty} checked out ${item.name}(s)?`)) {
+                checkinAllItems(itemId);
+            }
+        }
+
+        // Check in all items
+        async function checkinAllItems(itemId) {
+            const item = inventory.find(i => i.id === itemId);
+            if (!item) return;
+            
+            const totalQty = item.totalQuantity || 1;
+            
+            const updates = {
+                availableQuantity: totalQty,
+                checkedOutQuantity: 0,
+                checkouts: [],
+                status: 'In Inventory',
+                assignedTo: '',
+                assignedCapId: ''
+            };
+            
+            const result = await InventoryDB.updateItem(itemId, updates);
+            
+            if (result.success) {
+                showAlert(`All ${item.name}(s) have been checked back in.`, 'success');
+            } else {
+                showAlert(`Error checking in items: ${result.error}`, 'danger');
+            }
         }
 
         // Clear filters function
